@@ -17,6 +17,9 @@ def main():
         fo = open(sys.argv[2], "w")
         for line in fi:
             v = str.split(line.strip(), "\t")
+            if len(v) == 1:
+                # try with space
+                v = str.split(line.strip(), " ")
             m = s.smi2mx(v[0].strip())
             fo.write("%s_%s," % (sys.argv[1].replace(".smi", ""), v[1]))
             for i in range(len(m)-1):
