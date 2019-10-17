@@ -7,10 +7,25 @@
 # See the file LICENSE for details
 
 from keras import backend as K
+import numpy as np
+
 
 def rmse(y_true, y_pred):
+    """
+    Root Mean Square Error
+    """
     return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
 
 
 def score(y_true, y_pred):
+    """
+    Score function 1
+    """
     return K.log(K.mean(K.abs(y_true - y_pred), axis=-1)+1)
+
+
+def np_score(y_true, y_pred):
+    """
+    Score function 1
+    """
+    return np.log(np.mean(np.abs(y_true - y_pred), axis=0))

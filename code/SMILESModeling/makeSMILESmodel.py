@@ -39,6 +39,13 @@ def rmse(y_true, y_pred):
     return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
 
 
+def get_model():
+    model_build_directory = Path('.')
+    sys.path.append("%s" % (str(model_build_directory.absolute())))
+    from model import build_model
+    return build_model
+
+
 def build_2DData_model(dshape, input_shape2, nfilters, nunits):
     input_shape1 = (dshape[0], dshape[1], 1)
     print(input_shape1)
@@ -698,6 +705,7 @@ def main():
                      args.n_splits,
                      args.n_repeats,
                      args.mout)
+
             """
             nn.runloo(args.batch_size,
                       args.epochs,

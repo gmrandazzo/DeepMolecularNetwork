@@ -18,6 +18,10 @@ from keras.models import load_model
 from keras.layers import Conv2D, Flatten, Dense, Dropout, Activation, MaxPooling2D, ZeroPadding2D, BatchNormalization, AveragePooling2D, Concatenate
 from keras.utils import np_utils
 from sklearn.metrics import r2_score
+from sklearn.metrics import mean_absolute_error as mae
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.model_selection import ParameterGrid
+from sklearn.model_selection import ParameterGrid
 import sys
 from sys import argv
 import time
@@ -30,10 +34,19 @@ import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
-from misc import MDCTrainTestSplit, TrainTestSplit, RepeatedKFold, ReadDescriptors, ReadTarget
-from keras_additional_loss_functions import rmse, score
+from misc import GetKerasModel
+from misc import MDCTrainTestSplit
+from misc import TrainTestSplit
+from misc import RepeatedKFold
+from misc import ReadDescriptors
+from misc import ReadTarget
 
-def build_2DData_model(dshape, input_shape2, nfilters, nunits):
+from keras_additional_loss_functions import rmse
+from keras_additional_loss_functions import score
+from keras_additional_loss_functions import np_score
+
+
+def example_build_2DData_model(dshape, input_shape2, nfilters, nunits):
     input_shape1 = (dshape[0], dshape[1], 1)
     print(input_shape1)
     "Model branch 1"
@@ -92,59 +105,58 @@ def build_2DData_model(dshape, input_shape2, nfilters, nunits):
     return fmodel
 
 
-def build_model(dshape, nfilters, nunits):
+def example_build_model(dshape, nfilters, nunits):
     input_shape_ = (dshape[0], dshape[1], 1)
     print(input_shape_)
     model = Sequential()
     # model.add(BatchNormalization(input_shape=input_shape_))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 4),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 4),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
-
     model.add(Conv2D(nfilters,
-                    kernel_size=(1, 2),
-                    strides=(1, 1),
-                    input_shape=input_shape_))
+                     kernel_size=(1, 2),
+                     strides=(1, 1),
+                     input_shape=input_shape_))
     model.add(Activation('relu'))
 
     """
@@ -250,8 +262,10 @@ def build_gridsearch_model(dshape, n_conv, nfilters, ndense_layers, nunits):
     model.add(Dense(1))
     # Compile model
     model.compile(loss=score,
-                  optimizer=optimizers.Adam(lr=0.0001), metrics=[score, 'mse', 'mae'])
+                  optimizer=optimizers.Adam(lr=0.0001),
+                  metrics=[score, 'mse', 'mae'])
     return model
+
 
 class NNTrain(object):
     def __init__(self, ohe_dir, target, dx=None, n_descs=None):
@@ -379,14 +393,26 @@ class NNTrain(object):
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         model = None
+        model_ = GetKerasModel()
+
         if self.dx is not None:
             print("Number of descriptors: %d" % (self.n_descs))
-            model = build_2DData_model(self.input_shape,
-                                       self.n_descs,
-                                       nfilters,
-                                       nunits)
+            if model_ is None:
+                model = example_build_2DData_model(self.input_shape,
+                                                   self.n_descs,
+                                                   nfilters,
+                                                   nunits)
+            else:
+                model = model_(self.input_shape,
+                               self.n_descs,
+                               nfilters,
+                               nunits)
         else:
-            model = build_model(self.input_shape, nfilters, nunits)
+            if model_ is None:
+                model = example_build_model(self.input_shape, nfilters, nunits)
+            else:
+                model = model_(self.input_shape, nfilters, nunits)
+
         print(model.summary())
 
         x_train, y_train = self.GenData(train_keys)
@@ -488,14 +514,28 @@ class NNTrain(object):
                                                            len(test_keys)))
 
             model = None
+            model_ = GetKerasModel()
             if self.dx is not None:
                 print("Number of descriptors: %d" % (self.n_descs))
-                model = build_2DData_model(self.input_shape,
-                                           self.n_descs,
-                                           nfilters,
-                                           nunits)
+                if model_ is None:
+                    model = example_build_2DData_model(self.input_shape,
+                                                       self.n_descs,
+                                                       nfilters,
+                                                       nunits)
+                else:
+                    model = model_(self.input_shape,
+                                   self.n_descs,
+                                   nfilters,
+                                   nunits)
             else:
-                model = build_model(self.input_shape, nfilters, nunits)
+                if model_ is None:
+                    model = example_build_model(self.input_shape,
+                                                nfilters,
+                                                nunits)
+                else:
+                    model = model_(self.input_shape,
+                                   nfilters,
+                                   nunits)
 
             print(model.summary())
             dname = cvout.replace(".csv", "")
@@ -537,7 +577,8 @@ class NNTrain(object):
                       validation_data=(x_test, y_test),
                       callbacks=callbacks_)
 
-            bestmodel = load_model(model_output, custom_objects={"score": score})
+            bestmodel = load_model(model_output,
+                                   custom_objects={"score": score})
             yrecalc = bestmodel.predict(x_train)
             for i in range(len(yrecalc)):
                 recalc[train_keys[i]].extend(list(yrecalc[i]))
@@ -608,7 +649,17 @@ class NNTrain(object):
             x_train, y_train = self.GenData(train_keys)
             x_test, y_test = self.GenData(test_keys)
 
-            model = build_model(self.nfeatures, nunits, ndense_layers)
+            model = None
+            model_ = GetKerasModel()
+            if model_ is None:
+                model = example_build_model(self.nfeatures,
+                                            nunits,
+                                            ndense_layers)
+            else:
+                model = model_(self.nfeatures,
+                               nunits,
+                               ndense_layers)
+
             print(model.summary())
             b = 0
             if batch_size_ is None:
@@ -616,10 +667,10 @@ class NNTrain(object):
             else:
                 b = batch_size_
             log_dir_ = ("./logs/%s_#b%d_#e%d_#u%d_#dl%d_" % (val_key,
-                                                                b,
-                                                                num_epochs,
-                                                                nunits,
-                                                                ndense_layers))
+                                                             b,
+                                                             num_epochs,
+                                                             nunits,
+                                                             ndense_layers))
             log_dir_ += time.strftime("%Y%m%d%H%M%S")
 
             callbacks_ = [TensorBoard(log_dir=log_dir_,
@@ -649,7 +700,9 @@ class NNTrain(object):
 
         fo = open(cvout, "w")
         for key in predictions.keys():
-            fo.write("%s,%.4f,%.4f\n" % (key, self.target[key], predictions[key]))
+            fo.write("%s,%.4f,%.4f\n" % (key,
+                                         self.target[key],
+                                         predictions[key]))
         fo.close()
 
     def GridSearch(self,
@@ -672,7 +725,7 @@ class NNTrain(object):
         # This is more stable
         x_test, y_test = self.GenData(test_keys)
 
-        ## PARAMETER DEFINITIONS
+        # PARAMETER DEFINITIONS
         # simple architecture
         """
         param = {}
@@ -710,6 +763,7 @@ class NNTrain(object):
                 s = ("%s-%s" % (units, layers))
                 already_computed_combo.append(s)
             fi.close()
+        model_ = GetKerasModel()
         for c in all_combo:
             """
             # simple architecture
@@ -730,7 +784,20 @@ class NNTrain(object):
                                               c["activation"],
                                               c["dropout"])
                 """
-                model = build_dnn_resnet_model(self.nfeatures, c["nunits"],  c["ndense_layers"])
+                if model_ is None:
+                    model = example_build_model(self.nfeatures,
+                                                c["nunits"],
+                                                c["ndense_layers"])
+                else:
+                    model = model_(self.nfeatures,
+                                   c["nunits"],
+                                   c["ndense_layers"])
+
+                """
+                model = build_dnn_resnet_model(self.nfeatures,
+                                               c["nunits"],
+                                               c["ndense_layers"])
+                """
 
                 print(model.summary())
                 b = batch_size_
@@ -779,7 +846,8 @@ class NNTrain(object):
                           validation_data=(x_test, y_test),
                           callbacks=callbacks_)
 
-                bestmodel = load_model(model_output, custom_objects={"score": score})
+                bestmodel = load_model(model_output,
+                                       custom_objects={"score": score})
 
                 yrecalc_train = bestmodel.predict(x_train)
 

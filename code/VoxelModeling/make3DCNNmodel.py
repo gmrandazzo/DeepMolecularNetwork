@@ -36,6 +36,7 @@ import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
+from misc import GetKerasModel
 from misc import ReadDescriptors
 from misc import ReadTarget
 from misc import MDCTrainTestSplit
@@ -106,38 +107,7 @@ class AIModel(object):
         print("Input shape: {}".format(input_shape))
         print("Channel type: %s" % (conv3d_chtype))
         return tuple(input_shape), conv3d_chtype
-    """
-    def ReadDescriptors(self, csv_descriptors):
-        d = {}
-        header = []
-        fi = open(csv_descriptors, "r")
-        for line in fi:
-            if "Molecule" in line or "Object Names" in line:
-                header.extend(str.split(line.strip(), ",")[1:])
-            else:
-                v = str.split(line.strip(), ",")
-                d[v[0]] = list(v[1:])
-        fi.close()
-        return d, len(list(d.values())[0]), header
 
-    def ReadTarget(self, csv_target):
-        fi = open(csv_target, "r")
-        d = {}
-        for line in fi:
-            v = str.split(line.strip(), ",")
-            if "Molecule" in line:
-                continue
-            else:
-                if len(v) > 2:
-                    if v[0] not in d.keys():
-                        d[v[0]] = []
-                    for item in v[1:]:
-                        d[v[0]].append(float(item))
-                else:
-                    d[v[0]] = float(v[1])
-        fi.close()
-        return d
-    """
 
     def makeDataset(self, keys, nrotations):
         """
@@ -318,15 +288,40 @@ def run(db,
     print(test_keys)
 
     model = None
+    model_ = GetKerasModel()
     if ai.other_descriptors is None:
-        model = build_model(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
+        if model_ is None:
+            model = build_model(ai.conv3d_chtype,
+                                ai.input_shape,
+                                ndense_layers,
+                                nunits,
+                                nfilters)
+        else:
+            model = model_(ai.conv3d_chtype,
+                           ai.input_shape,
+                           ndense_layers,
+                           nunits,
+                           nfilters)
         # model = build_fcn_model(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
         # model = model_scirep(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
         # model = ResNetModel(ai.input_shape)
         print(model.summary())
     else:
-        # model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, [len(train_keys), ai.nfeatures], ndense_layers, nunits, nfilters)
-        model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, ai.nfeatures, ndense_layers, nunits, nfilters)
+        if model_ is None:
+            model = build_2DData_model(ai.conv3d_chtype,
+                                       ai.input_shape,
+                                       ai.nfeatures,
+                                       ndense_layers,
+                                       nunits,
+                                       nfilters)
+        else:
+            model = model_(ai.conv3d_chtype,
+                           ai.input_shape,
+                           ai.nfeatures,
+                           ndense_layers,
+                           nunits,
+                           nfilters)
+
         """
         for l in model.layers[0].layers:
             print(l.summary())
@@ -388,125 +383,6 @@ def run(db,
 
     if outmodel is not None:
         model.save(outmodel)
-
-
-def loo(db,
-        csv_target,
-        csv_descriptors,
-        num_epochs,
-        n_rot_train,
-        train_steps_per_epoch_,
-        n_rot_test,
-        test_steps_per_epoch_,
-        ndense_layers,
-        nunits,
-        nfilters,
-        pout):
-    # Load the dataset
-    ai = AIModel(csv_target, db, csv_descriptors)
-    print("N. instances: %d" % (len(ai.target)))
-
-    predictions = dict()
-    loo_ = 0
-    for val_key in ai.target.keys():
-        sub_target = {}
-        for key in ai.target.keys():
-            if val_key == key:
-                continue
-            else:
-                sub_target[key] = ai.target[key]
-                #train_keys.append(key)
-
-        #train_keys, test_keys = MDCTrainTestSplit(sub_target, 0)
-        train_keys, test_keys = DISCTrainTestSplit(sub_target)
-        train_generator = ai.VoxelTrainGenerator(train_keys, n_rot_train)
-        test_generator = ai.VoxelTrainGenerator(test_keys, n_rot_test)
-
-        print("Train set size: %d Test on %d to predict %s" % (len(train_keys), len(test_keys), val_key))
-
-        model = None
-        if ai.other_descriptors is None:
-            model = build_model(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
-            # model = model_scirep(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
-            # model = ResNetModel(ai.input_shape)
-            print(model.summary())
-        else:
-            # model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, [len(train_keys), ai.nfeatures], ndense_layers, nunits, nfilters)
-            model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, ai.nfeatures, ndense_layers, nunits, nfilters)
-            """
-            for l in model.layers[0].layers:
-                print(l.summary())
-            """
-            print("Total Summary")
-            print(model.summary())
-
-
-        dname = csv_target.replace(".csv", "")
-        log_dir_ = ("./logs/%s_lo%d_%s_%d_#rot%d_#f%d_#dl%d_#u%d" % (val_key,
-                                                                     loo_,
-                                                                     dname,
-                                                                     num_epochs,
-                                                                     train_steps_per_epoch_,
-                                                                     nfilters,
-                                                                     ndense_layers,
-                                                                     nunits))
-        log_dir_ += time.strftime("%Y%m%d%H%M%S")
-        callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                  histogram_freq=0,
-                                  write_graph=False,
-                                  write_images=False)]
-        """
-        callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                  histogram_freq=0,
-                                  write_graph=False,
-                                  write_images=False),
-                      EarlyStopping(monitor='val_loss',
-                                    min_delta=0,
-                                    patience=3,
-                                    verbose=0,
-                                    mode='auto')]
-        """
-
-
-        x_val, y_val = ai.VoxelTestSetGenerator([val_key], n_rotation_test)
-        model.fit_generator(train_generator,
-                            epochs=num_epochs,
-                            steps_per_epoch=train_steps_per_epoch_,
-                            verbose=1,
-                            # validation_data=(x_test_, y_test_),
-                            validation_data=test_generator,
-                            validation_steps=test_steps_per_epoch_,
-                            callbacks=callbacks_)
-
-        y_val_pred = model.predict(x_val)
-        predictions[val_key] = y_val_pred[0]
-        loo_ += 1
-
-    if pout is not None:
-        fo = open(pout, "w")
-        for key in predictions.keys():
-            fo.write("%s," % (key))
-            if len(predictions[key]) > 0:
-                freq = len(predictions[key])
-                ypavg = np.mean(predictions[key])
-                ystdev = np.std(predictions[key])
-                res = ai.target[key] - ypavg
-                fo.write("%.4f,%.4f,%.4f,%.4f,%d\n" % (ai.target[key],
-                                                      ypavg,
-                                                      ystdev,
-                                                      res,
-                                                      freq))
-            else:
-                fo.write("%.4f,0.0,0.0,0.0\n" % (ai.target[key]))
-        fo.close()
-    else:
-        yloop = {}
-        for key in predictions.keys():
-            if len(predictions[key]) > 0:
-                yloop[key] = np.mean(predictions[key])
-            else:
-                continue
-        return yloop
 
 
 def cv(db,
@@ -589,49 +465,53 @@ def cv(db,
         train_keys = None
         test_keys = None
 
-        """
-        if fcvgroup is not None:
-            sub_target = {}
-            vkey = list(cvgroups.keys())[list(cvgroups.values()).index(val_keys)]
-            for key in cvgroups.keys():
-                if key == vkey:
-                    continue
-                else:
-                    sub_target[key] = cvgroups[key]
-
-            tkey = random.choice(list(sub_target.keys()))
-            print(sub_target[tkey])
-            test_keys = sub_target[tkey]
-            train_keys = []
-            for key in sub_target.keys():
-                if key == tkey:
-                    continue
-                else:
-                    train_keys.extend(sub_target[key])
-        else:
-        """
         sub_target = {}
         for key in dataset_keys:
             sub_target[key] = ai.target[key]
         # get the 20% of the dataset to build a NN test set
         ntobj = int(np.ceil(len(sub_target)*0.2))
-        #train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
+        # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
         train_keys, test_keys = DISCTrainTestSplit(sub_target)
 
         train_generator = ai.VoxelTrainGenerator(train_keys, n_rot_train)
 
-        print("Train set size: %d Test set size %d" % (len(train_keys), len(test_keys)))
+        print("Train set size: %d Test set size %d" % (len(train_keys),
+                                                       len(test_keys)))
         # print(global_test_intexes)
 
         model = None
+        model_ = GetKerasModel()
         if ai.other_descriptors is None:
-            model = build_model(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
+            if model_ is None:
+                model = build_model(ai.conv3d_chtype,
+                                    ai.input_shape,
+                                    ndense_layers,
+                                    nunits,
+                                    nfilters)
+            else:
+                model = model_(ai.conv3d_chtype,
+                               ai.input_shape,
+                               ndense_layers,
+                               nunits,
+                               nfilters)
             # model = model_scirep(ai.conv3d_chtype, ai.input_shape, ndense_layers, nunits, nfilters)
             # model = ResNetModel(ai.input_shape)
             print(model.summary())
         else:
-            # model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, [len(train_keys), ai.nfeatures], ndense_layers, nunits, nfilters)
-            model = build_2DData_model(ai.conv3d_chtype, ai.input_shape, ai.nfeatures, ndense_layers, nunits, nfilters)
+            if model_ is None:
+                model = build_2DData_model(ai.conv3d_chtype,
+                                           ai.input_shape,
+                                           ai.nfeatures,
+                                           ndense_layers,
+                                           nunits,
+                                           nfilters)
+            else:
+                model = model_(ai.conv3d_chtype,
+                               ai.input_shape,
+                               ndense_layers,
+                               nunits,
+                               nfilters)
+
             """
             for l in model.layers[0].layers:
                 print(l.summary())

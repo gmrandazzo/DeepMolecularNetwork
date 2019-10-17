@@ -51,7 +51,7 @@ from misc import DISCTrainTestSplit
 from misc import TrainTestSplit
 from misc import ReadDescriptors, ReadTarget
 from misc import LoadKerasModels
-from keras_additional_loss_functions import rmse, score
+from keras_additional_loss_functions import rmse, score, np_score
 import matplotlib.pyplot as plt
 
 """
@@ -62,10 +62,6 @@ def rmse(y_true, y_pred):
 def score(y_true, y_pred):
     return K.log(K.mean(K.abs(y_true - y_pred), axis=-1))
 """
-
-def np_score(y_true, y_pred):
-    return np.log(np.mean(np.abs(y_true - y_pred), axis=0))
-
 
 def build_model(nfeatures, nunits, ndense_layers):
     model = Sequential()

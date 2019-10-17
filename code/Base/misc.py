@@ -6,6 +6,7 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
+import sys
 from pathlib import Path
 from keras.models import load_model
 import numpy as np
@@ -278,6 +279,18 @@ def ReadTarget(csv_target, sep=","):
                 d[v[0]] = np.array(float(v[1]))
     fi.close()
     return d
+
+
+def GetKerasModel():
+    p = Path('.')
+    sys.path.append("%s" % (str(p.absolute())))
+    try:
+        from model import build_model
+        return build_model
+    except ImportError:
+        print("Please create a model.py file in your directory")
+        print("with a build_model function.")
+        return None
 
 
 def LoadKerasModels(mpath, custom_objects_=None):
