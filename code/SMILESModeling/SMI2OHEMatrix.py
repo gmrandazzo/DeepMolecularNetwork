@@ -37,7 +37,7 @@ def main():
         fi.close()
         fo.close()
     else:
-        print("\nUsage %s [smiles] [max padding (int)] [csv output]")
+        print("\nUsage %s [smiles] [max padding (int)] [csv output]\n" % (sys.argv[0]))
     return
 
 

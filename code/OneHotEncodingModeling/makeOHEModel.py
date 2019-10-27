@@ -21,7 +21,6 @@ from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error as mae
 from sklearn.metrics import mean_squared_error as mse
 from sklearn.model_selection import ParameterGrid
-from sklearn.model_selection import ParameterGrid
 import sys
 from sys import argv
 import time
@@ -294,54 +293,84 @@ class NNTrain(object):
                 continue
         return X, list(X.values())[0].shape
 
-    def DataGenerator(self, train_keys, batch_size_=20):
+    def DataGenerator(self, keys, batch_size_=200):
         """ to be used with fit_generator and steps_per_epoch"""
-        size_tkeys = len(train_keys)
-        batch_size = None
-
-        if train_keys < batch_size_:
-            batch_size = size_tkeys
-        else:
-            batch_size = batch_size_
-
         if self.dx is not None:
-            while True:
-                random.seed(datetime.now().microsecond)
-                batch_x_bh1 = []
-                batch_x_bh2 = []
-                batch_y = []
-                for i in range(batch_size):
-                    indx = random.randint(0, size_tkeys-1)
-                    key_ = train_keys[indx]
-                    try:
+            keylst = list(set(list(self.X.keys())).intersection(list(self.target.keys())))
+            keylst = list(set(keylst).intersection(list(self.dx.keys())))
+            keylst = list(set(keylst).intersection(keys))
+
+            size_tkeys = len(keylst)
+
+            if size_tkeys < batch_size_:
+                # Give the entire keylist dataset... no random selection
+                while True:
+                    random.seed(datetime.now().microsecond)
+                    batch_x_bh1 = []
+                    batch_x_bh2 = []
+                    batch_y = []
+                    for i in range(size_tkeys):
+                        key_ = keylst[i]
                         tval = self.target[key_]
                         bfeat = self.X[key_]
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
                         batch_x_bh1.append(bfeat)
                         batch_x_bh2.append(cfeat)
-                    except KeyError:
-                        print("Molecule %s not found" % (key_))
-                batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
-                batch_x_bh2 = np.array(batch_x_bh2).astype(float)
-                yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
+                    batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
+                    batch_x_bh2 = np.array(batch_x_bh2).astype(float)
+                    yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
+            else:
+                # Random selection several time...
+                while True:
+                    random.seed(datetime.now().microsecond)
+                    batch_x_bh1 = []
+                    batch_x_bh2 = []
+                    batch_y = []
+                    for i in range(batch_size_):
+                        indx = random.randint(0, size_tkeys-1)
+                        key_ = keylst[indx]
+                        tval = self.target[key_]
+                        bfeat = self.X[key_]
+                        cfeat = self.dx[key_]
+                        batch_y.append(tval)
+                        batch_x_bh1.append(bfeat)
+                        batch_x_bh2.append(cfeat)
+                    batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
+                    batch_x_bh2 = np.array(batch_x_bh2).astype(float)
+                    yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
         else:
-            while True:
-                random.seed(datetime.now().microsecond)
-                batch_x = []
-                batch_y = []
-                for i in range(batch_size):
-                    indx = random.randint(0, size_tkeys-1)
-                    key_ = train_keys[indx]
-                    try:
+            keylst = list(set(list(self.X.keys())).intersection(list(self.target.keys())))
+            keylst = list(set(keylst).intersection(keys))
+            size_tkeys = len(keylst)
+
+            if size_tkeys < batch_size_:
+                while True:
+                    random.seed(datetime.now().microsecond)
+                    batch_x = []
+                    batch_y = []
+                    for i in range(size_tkeys):
+                        key_ = keylst[i]
                         tval = self.target[key_]
                         bfeat = self.X[key_]
                         batch_y.append(tval)
                         batch_x.append(bfeat)
-                    except KeyError:
-                        print("Molecule %s not found" % (key_))
-                batch_x = np.array(batch_x)[:, :, :, np.newaxis]
-                yield(batch_x, np.array(batch_y))
+                    batch_x = np.array(batch_x)[:, :, :, np.newaxis]
+                    yield(batch_x, np.array(batch_y))
+            else:
+                while True:
+                    random.seed(datetime.now().microsecond)
+                    batch_x = []
+                    batch_y = []
+                    for i in range(batch_size_):
+                        indx = random.randint(0, size_tkeys-1)
+                        key_ = keylst[indx]
+                        tval = self.target[key_]
+                        bfeat = self.X[key_]
+                        batch_y.append(tval)
+                        batch_x.append(bfeat)
+                    batch_x = np.array(batch_x)[:, :, :, np.newaxis]
+                    yield(batch_x, np.array(batch_y))
 
     def GenData(self, keys):
         if self.dx is not None:
@@ -384,6 +413,7 @@ class NNTrain(object):
     def simplerun(self,
                   batch_size_,
                   num_epochs,
+                  steps_per_epochs_,
                   nfilters,
                   nunits,
                   mout=None):
@@ -450,13 +480,25 @@ class NNTrain(object):
                                     verbose=0,
                                     mode='auto')]
         """
+
+        # train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
+        train_generator = self.DataGenerator(train_keys, batch_size_)
+        model.fit_generator(train_generator,
+                            steps_per_epoch=steps_per_epochs_,
+                            epochs=num_epochs,
+                            verbose=1,
+                            validation_data=(x_test, y_test),
+                            # validation_data=test_generator,
+                            # validation_steps=test_steps_per_epoch,
+                            callbacks=callbacks_)
+        """
         model.fit(x_train, y_train,
                   epochs=num_epochs,
                   batch_size=b,
                   verbose=self.verbose,
                   validation_data=(x_test, y_test),
                   callbacks=callbacks_)
-
+        """
         yrecalc = model.predict(x_train)
         ypred_test = model.predict(x_test)
         print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
@@ -465,6 +507,7 @@ class NNTrain(object):
     def runcv(self,
               batch_size_,
               num_epochs,
+              steps_per_epochs_,
               nfilters,
               nunits,
               cvout,
@@ -573,6 +616,7 @@ class NNTrain(object):
             model.fit(x_train, y_train,
                       epochs=num_epochs,
                       batch_size=b,
+                      steps_per_epochs=steps_per_epochs_,
                       verbose=1,
                       validation_data=(x_test, y_test),
                       callbacks=callbacks_)
@@ -707,6 +751,7 @@ class NNTrain(object):
 
     def GridSearch(self,
                    batch_size_,
+                   steps_per_epochs_,
                    num_epochs,
                    gmout="GridSearchResult"):
 
@@ -842,6 +887,7 @@ class NNTrain(object):
                 model.fit(x_train, y_train,
                           epochs=num_epochs,
                           batch_size=b,
+                          steps_per_epochs=steps_per_epochs_,
                           verbose=self.verbose,
                           validation_data=(x_test, y_test),
                           callbacks=callbacks_)
@@ -919,10 +965,12 @@ def main():
                         type=str, help='input data matrix')
     parser.add_argument('--ytarget', default=None,
                         type=str, help='input data matrix')
-    parser.add_argument('--epochs', default=100, type=int,
+    parser.add_argument('--epochs', default=500, type=int,
                         help='Number of epochs')
-    parser.add_argument('--batch_size', default=None, type=int,
+    parser.add_argument('--batch_size', default=100, type=int,
                         help='Batch size')
+    parser.add_argument('--steps_per_epochs', default=200, type=int,
+                        help='Steps per epochs')
     parser.add_argument('--n_splits', default=5, type=int,
                         help='Number of kfold splits')
     parser.add_argument('--n_repeats', default=20, type=int,
@@ -940,7 +988,7 @@ def main():
 
     args = parser.parse_args(argv[1:])
     if args.ohedir is None or args.ytarget is None:
-        print("ERROR! Please specify input table to train!")
+        print("ERROR! Please specify input ohe directory and a target to train!")
         print("\n Usage: %s --ohedir [input file] --xmatrix [optinal csv descriptors] --ytarget [input file] --epochs [int] --batch_size [int] --nunits [int] --nfilters [int]\n\n" % (argv[0]))
     else:
         # fix random seed for reproducibility
@@ -979,11 +1027,13 @@ def main():
             nn.verbose = 1
             nn.simplerun(args.batch_size,
                          args.epochs,
+                         args.steps_per_epochs,
                          args.nfilters,
                          args.nunits)
         else:
             nn.runcv(args.batch_size,
                      args.epochs,
+                     args.steps_per_epochs,
                      args.nfilters,
                      args.nunits,
                      args.cvout,

@@ -24,6 +24,10 @@ class SMILES2MX(object):
                             'Br',
                             'I',
                             'H',
+                            'Si',
+                            'Se',
+                            'As',
+                            'B',
                             'Na',
                             'Fe',
                             'Mg',
@@ -101,7 +105,7 @@ class SMILES2MX(object):
 
         size_smi = len(psmi)
         if size_smi > self.row_padding:
-            print("SMILE size %d > %d" % (size_smi, self.row_padding))
+            print("SMILE %s size %d > %d" % (smi, size_smi, self.row_padding))
             size_smi = self.row_padding
 
         for j in range(size_smi):
