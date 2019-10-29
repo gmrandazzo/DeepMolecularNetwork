@@ -277,8 +277,13 @@ class NNTrain(object):
     def ReadOneHotEncodingCSV(self, ohe_csv):
         f = open(ohe_csv, "r")
         m = []
+        row = []
         for line in f:
-            m.append(str.split(line.strip(), ","))
+            if "END" in line:
+                m.append(row)
+                del row[:]
+            else:
+                row.append(str.split(line.strip(), ","))
         f.close()
         return np.array(m)
 
@@ -288,6 +293,7 @@ class NNTrain(object):
         for x in p:
             if x.is_file() and ".csv" in str(x):
                 key = x.resolve().stem.split(".")[0]
+                # Each molecule can have multiple smiles structure representations
                 X[key] = self.ReadOneHotEncodingCSV(x)
             else:
                 continue
@@ -312,7 +318,15 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        bfeat = self.X[key_]
+                        smiohes = self.X[key_]
+                        smiohes_size = len(smiohes)
+                        smiohe = None
+                        if smiohes_size > 1:
+                            k = random.randint(0, smiohes_size-1)
+                            smiohe = self.X[key_][k]
+                        else:
+                            smiohe = self.X[key_][0]
+                        bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
                         batch_x_bh1.append(bfeat)
@@ -331,7 +345,15 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        bfeat = self.X[key_]
+                        smiohes = self.X[key_]
+                        smiohes_size = len(smiohes)
+                        smiohe = None
+                        if smiohes_size > 1:
+                            k = random.randint(0, smiohes_size-1)
+                            smiohe = self.X[key_][k]
+                        else:
+                            smiohe = self.X[key_][0]
+                        bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
                         batch_x_bh1.append(bfeat)
@@ -352,9 +374,16 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        bfeat = self.X[key_]
+                        smiohes = self.X[key_]
+                        smiohes_size = len(smiohes)
+                        smiohe = None
+                        if smiohes_size > 1:
+                            k = random.randint(0, smiohes_size-1)
+                            smiohe = self.X[key_][k]
+                        else:
+                            smiohe = self.X[key_][0]
                         batch_y.append(tval)
-                        batch_x.append(bfeat)
+                        batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
                     yield(batch_x, np.array(batch_y))
             else:
@@ -366,14 +395,22 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        bfeat = self.X[key_]
+                        smiohes = self.X[key_]
+                        smiohes_size = len(smiohes)
+                        smiohe = None
+                        if smiohes_size > 1:
+                            k = random.randint(0, smiohes_size-1)
+                            smiohe = self.X[key_][k]
+                        else:
+                            smiohe = self.X[key_][0]
                         batch_y.append(tval)
-                        batch_x.append(bfeat)
+                        batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
                     yield(batch_x, np.array(batch_y))
 
     def GenData(self, keys):
         if self.dx is not None:
+            ret_keys = []
             batch_x_bh1 = []
             batch_x_bh2 = []
             batch_y = []
@@ -385,12 +422,14 @@ class NNTrain(object):
                     batch_y.append(tval)
                     batch_x_bh1.append(bfeat)
                     batch_x_bh2.append(cfeat)
+                    ret_keys.append(key)
                 except KeyError:
                     print("Molecule %s not found" % (key))
             batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
             batch_x_bh2 = np.array(batch_x_bh2).astype(float)
-            return [batch_x_bh1, batch_x_bh2], np.array(batch_y)
+            return [batch_x_bh1, batch_x_bh2], np.array(batch_y), ret_keys
         else:
+            ret_keys = []
             batch_features = []
             batch_target = []
             for key in keys:
@@ -399,6 +438,7 @@ class NNTrain(object):
                     bfeat = self.X[key]
                     batch_target.append(tval)
                     batch_features.append(bfeat)
+                    ret_keys.append(key)
                 except KeyError:
                     print("Molecule %s not found" % (key))
             # shape = np.array(batch_features).shape
@@ -408,7 +448,7 @@ class NNTrain(object):
                                                               shape[2], 1)
             """
             batch_features = np.array(batch_features)[:, :, :, np.newaxis]
-            return batch_features, np.array(batch_target)
+            return batch_features, np.array(batch_target), ret_keys
 
     def simplerun(self,
                   batch_size_,
@@ -445,8 +485,8 @@ class NNTrain(object):
 
         print(model.summary())
 
-        x_train, y_train = self.GenData(train_keys)
-        x_test, y_test = self.GenData(test_keys)
+        x_train, y_train, rtrain_keys = self.GenData(train_keys)
+        x_test, y_test, rtest_keys = self.GenData(test_keys)
         if self.dx is not None:
             print("Branch 1 size:", np.array(x_train[0]).shape)
             print("Branch 2 size:", np.array(x_train[1]).shape)
@@ -459,11 +499,13 @@ class NNTrain(object):
             b = len(x_test)
         else:
             b = batch_size_
-        log_dir_ = ("./logs/#b%d_#e%d_#u%d_#f%d_" % (b,
-                                                     num_epochs,
-                                                     nunits,
-                                                     nfilters))
-        log_dir_ += time.strftime("%Y%m%d%H%M%S")
+
+        name = "#b%d_#e%d_#u%d_#f%d_" % (b,
+                                         num_epochs,
+                                         nunits,
+                                         nfilters)
+        name += time.strftime("%Y%m%d%H%M%S")
+        log_dir_ = ("./logs/%s" % (name))
 
         callbacks_ = [TensorBoard(log_dir=log_dir_,
                                   histogram_freq=0,
@@ -501,6 +543,12 @@ class NNTrain(object):
         """
         yrecalc = model.predict(x_train)
         ypred_test = model.predict(x_test)
+
+        fo = open("%s_pred.csv" % (name), "w")
+        for i in range(len(rtest_keys)):
+            fo.write("%s,%f,%f\n" % (rtest_keys[i], y_test[i], ypred_test[i]))
+        fo.close()
+
         print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
                                      r2_score(y_test, ypred_test)))
 
@@ -549,9 +597,9 @@ class NNTrain(object):
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
 
-            x_train, y_train = self.GenData(train_keys)
-            x_test, y_test = self.GenData(test_keys)
-            x_val, y_val = self.GenData(val_keys)
+            x_train, y_train, rtrain_keys = self.GenData(train_keys)
+            x_test, y_test, rtest_keys = self.GenData(test_keys)
+            x_val, y_val, rval_keys = self.GenData(val_keys)
 
             print("Train set size: %d Test set size %d" % (len(train_keys),
                                                            len(test_keys)))
@@ -690,8 +738,8 @@ class NNTrain(object):
 
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, 0)
             train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
-            x_train, y_train = self.GenData(train_keys)
-            x_test, y_test = self.GenData(test_keys)
+            x_train, y_train, rtrain_keys = self.GenData(train_keys)
+            x_test, y_test, rtest_keys = self.GenData(test_keys)
 
             model = None
             model_ = GetKerasModel()
@@ -762,13 +810,13 @@ class NNTrain(object):
         # train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
         # train_generator = self.DataGenerator(train_keys, batch_size_)
 
-        x_train, y_train = self.GenData(train_keys)
+        x_train, y_train, rtrain_keys = self.GenData(train_keys)
 
         # This is unstable
         # test_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
         # test_generator = self.DataGenerator(test_keys, batch_size_)
         # This is more stable
-        x_test, y_test = self.GenData(test_keys)
+        x_test, y_test, rtest_keys = self.GenData(test_keys)
 
         # PARAMETER DEFINITIONS
         # simple architecture

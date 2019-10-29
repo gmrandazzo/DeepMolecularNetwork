@@ -25,6 +25,7 @@ def main():
                 for i in range(len(row)-1):
                     fo.write("%d," % (row[i]))
                 fo.write("%d\n" % (row[-1]))
+            fo.write("END\n")
             """
             fo.write("%s_%s," % (sys.argv[1].replace(".smi", ""), v[1]))
             for i in range(len(m)-1):
