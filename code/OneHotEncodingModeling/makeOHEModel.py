@@ -523,7 +523,7 @@ class NNTrain(object):
                                     mode='auto')]
         """
 
-        # train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
+        #train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
         train_generator = self.DataGenerator(train_keys, batch_size_)
         model.fit_generator(train_generator,
                             steps_per_epoch=steps_per_epochs_,
@@ -593,7 +593,7 @@ class NNTrain(object):
             sub_target = {}
             for key in dataset_keys:
                 sub_target[key] = self.target[key]
-            ntobj = int(np.ceil(len(sub_target)*0.1))
+            # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
 
@@ -635,13 +635,15 @@ class NNTrain(object):
                 b = len(x_test)
             else:
                 b = batch_size_
-            log_dir_ = ("./logs/cv%d_%s_#b%d_#e%d_#u%d_#f%d_" % (cv_,
-                                                                 dname,
-                                                                 b,
-                                                                 num_epochs,
-                                                                 nunits,
-                                                                 nfilters))
-            log_dir_ += time.strftime("%Y%m%d%H%M%S")
+
+            name = "cv%d_%s_#b%d_#e%d_#u%d_#f%d_" % (cv_,
+                                                     dname,
+                                                     b,
+                                                     num_epochs,
+                                                     nunits,
+                                                     nfilters)
+            name += time.strftime("%Y%m%d%H%M%S")
+            log_dir_ = ("./logs/%s" % (name))
 
             model_output = None
             if mout_path is not None:
@@ -661,6 +663,16 @@ class NNTrain(object):
                                               verbose=0,
                                               save_best_only=True)]
 
+            train_generator = self.DataGenerator(train_keys, batch_size_)
+            model.fit_generator(train_generator,
+                                steps_per_epoch=steps_per_epochs_,
+                                epochs=num_epochs,
+                                verbose=1,
+                                validation_data=(x_test, y_test),
+                                # validation_data=test_generator,
+                                # validation_steps=test_steps_per_epoch,
+                                callbacks=callbacks_)
+            """
             model.fit(x_train, y_train,
                       epochs=num_epochs,
                       batch_size=b,
@@ -668,6 +680,7 @@ class NNTrain(object):
                       verbose=1,
                       validation_data=(x_test, y_test),
                       callbacks=callbacks_)
+            """
 
             bestmodel = load_model(model_output,
                                    custom_objects={"score": score})
