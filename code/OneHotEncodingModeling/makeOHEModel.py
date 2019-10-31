@@ -277,13 +277,13 @@ class NNTrain(object):
     def ReadOneHotEncodingCSV(self, ohe_csv):
         f = open(ohe_csv, "r")
         m = []
-        row = []
+        x = []
         for line in f:
             if "END" in line:
-                m.append(row)
-                del row[:]
+                m.append(np.array(x).astype('float'))
+                del x[:]
             else:
-                row.append(str.split(line.strip(), ","))
+                x.append(str.split(line.strip(), ","))
         f.close()
         return np.array(m)
 
@@ -293,11 +293,12 @@ class NNTrain(object):
         for x in p:
             if x.is_file() and ".csv" in str(x):
                 key = x.resolve().stem.split(".")[0]
-                # Each molecule can have multiple smiles structure representations
+                # Each molecule can have multiple smiles structure
+                # representations
                 X[key] = self.ReadOneHotEncodingCSV(x)
             else:
                 continue
-        return X, list(X.values())[0].shape
+        return X, list(X.values())[0].shape[1:]
 
     def DataGenerator(self, keys, batch_size_=200):
         """ to be used with fit_generator and steps_per_epoch"""
@@ -417,10 +418,17 @@ class NNTrain(object):
             for key in keys:
                 try:
                     tval = self.target[key]
-                    bfeat = self.X[key]
                     cfeat = self.dx[key]
                     batch_y.append(tval)
-                    batch_x_bh1.append(bfeat)
+                    smiohes = self.X[key]
+                    smiohes_size = len(smiohes)
+                    smiohe = None
+                    if smiohes_size > 1:
+                        k = random.randint(0, smiohes_size-1)
+                        smiohe = smiohes[k]
+                    else:
+                        smiohe = smiohes[0]
+                    batch_x_bh1.append(smiohe)
                     batch_x_bh2.append(cfeat)
                     ret_keys.append(key)
                 except KeyError:
@@ -435,12 +443,20 @@ class NNTrain(object):
             for key in keys:
                 try:
                     tval = self.target[key]
-                    bfeat = self.X[key]
+                    smiohes = self.X[key]
+                    smiohes_size = len(smiohes)
+                    smiohe = None
+                    if smiohes_size > 1:
+                        k = random.randint(0, smiohes_size-1)
+                        smiohe = smiohes[k]
+                    else:
+                        smiohe = smiohes[0]
                     batch_target.append(tval)
-                    batch_features.append(bfeat)
+                    batch_features.append(smiohe)
                     ret_keys.append(key)
                 except KeyError:
                     print("Molecule %s not found" % (key))
+                    continue
             # shape = np.array(batch_features).shape
             """
             batch_features = np.array(batch_features).reshape(shape[0],
@@ -448,6 +464,8 @@ class NNTrain(object):
                                                               shape[2], 1)
             """
             batch_features = np.array(batch_features)[:, :, :, np.newaxis]
+            print("AUUUUU")
+            print(batch_features.shape)
             return batch_features, np.array(batch_target), ret_keys
 
     def simplerun(self,
