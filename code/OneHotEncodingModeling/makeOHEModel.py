@@ -561,14 +561,36 @@ class NNTrain(object):
         """
         yrecalc = model.predict(x_train)
         ypred_test = model.predict(x_test)
-
         fo = open("%s_pred.csv" % (name), "w")
-        for i in range(len(rtest_keys)):
-            fo.write("%s,%f,%f\n" % (rtest_keys[i], y_test[i], ypred_test[i]))
-        fo.close()
-
-        print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
-                                     r2_score(y_test, ypred_test)))
+        if ypred_test.shape[1] > 1:
+            for i in range(len(rtest_keys)):
+                fo.write("%s," % (rtest_keys[i]))
+                for j in range(len(y_test[i])-1):
+                    fo.write("%f,%f," % (y_test[i][j], ypred_test[i][j]))
+                fo.write("%f,%f\n" % (y_test[i][-1], ypred_test[i][-1]))
+            fo.close()
+            # Then calculate R2 and Q2 for each output...
+            for j in range(ypred_test.shape[1]):
+                y_train_ = []
+                yrecalc_ = []
+                y_test_ = []
+                ypred_test_ = []
+                for i in range(ypred_test.shape[0]):
+                    y_train_.append(y_train[i][j])
+                    yrecalc_.append(yrecalc[i][j])
+                    y_test_.append(y_test[i][j])
+                    ypred_test_.append(ypred_test[i][j])
+                print("Output %d R2: %.4f Q2: %.4f" % (j,
+                                                       r2_score(y_train_, yrecalc_),
+                                                       r2_score(y_test_, ypred_test_)))
+        else:
+            for i in range(len(rtest_keys)):
+                fo.write("%s,%f,%f\n" % (rtest_keys[i],
+                                         y_test[i],
+                                         ypred_test[i]))
+            fo.close()
+            print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
+                                         r2_score(y_test, ypred_test)))
 
     def runcv(self,
               batch_size_,

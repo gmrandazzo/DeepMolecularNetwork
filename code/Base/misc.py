@@ -274,10 +274,11 @@ def ReadTarget(csv_target, sep=","):
                     d[v[0]] = []
                 for item in v[1:]:
                     d[v[0]].append(float(item))
-                    d[v[0]] = np.array(d[v[0]]).astype(float)
             else:
-                d[v[0]] = np.array(float(v[1]))
+                d[v[0]] = float(v[1])
     fi.close()
+    for key in d.keys():
+        d[key] = np.array(d[key]).astype(float)
     return d
 
 
