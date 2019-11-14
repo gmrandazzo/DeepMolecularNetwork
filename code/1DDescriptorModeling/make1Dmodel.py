@@ -5,10 +5,10 @@
 # You can use,modify, and distribute it under
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
-
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 from keras import backend as K
 # Some memory clean-up
 K.clear_session()
@@ -41,10 +41,11 @@ import datetime
 
 from dnnresnet import dnn_resnet_layer
 
-import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 from FeatureImportance import FeatureImportance, WriteFeatureImportance
+from misc import GetKerasModel
 from misc import RepeatedKFold
 from misc import MDCTrainTestSplit
 from misc import DISCTrainTestSplit
@@ -63,7 +64,7 @@ def score(y_true, y_pred):
     return K.log(K.mean(K.abs(y_true - y_pred), axis=-1))
 """
 
-def build_model(nfeatures, nunits, ndense_layers):
+def example_build_model(nfeatures, nunits, ndense_layers):
     model = Sequential()
     # model.add(Conv1D(16, kernel_size=7, strides=1, activation="relu", input_shape=(nfeatures,)))
     # model.add(Dense(nunits, input_shape=(nfeatures,), activation='relu'))
@@ -311,7 +312,6 @@ class NNTrain(object):
             if s in already_computed_combo:
                 print("%s already computed... skip..." % (s))
             else:
-
                 model = build_gridsearch_model(self.nfeatures,
                                                c["ndense_layers"],
                                                c["nunits"],
@@ -450,13 +450,20 @@ class NNTrain(object):
         train_keys, test_keys = TrainTestSplit(self.target, test_size_=0.20)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
+
         model = None
         if model_output is not None and Path(model_output).is_file():
             model = load_model(model_output)
         else:
-            model = build_model(self.nfeatures, nunits, ndense_layers)
-            # model = build_dnn_resnet_model(self.nfeatures, nunits, ndense_layers)
-
+            model_ = GetKerasModel()
+            if model_ is None:
+                model = example_build_model(self.nfeatures,
+                                            nunits,
+                                            ndense_layers)
+            else:
+                model = model_(self.nfeatures,
+                               nunits,
+                               ndense_layers)
         print(model.summary())
 
         # train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
@@ -601,7 +608,17 @@ class NNTrain(object):
             print("Train set size: %d Test set size %d" % (len(train_keys),
                                                            len(test_keys)))
 
-            model = build_model(self.nfeatures, nunits, ndense_layers)
+            model = None
+            model_ = GetKerasModel()
+            if model_ is None:
+                model = example_build_model(self.nfeatures,
+                                            nunits,
+                                            ndense_layers)
+            else:
+                model = model_(self.nfeatures,
+                               nunits,
+                               ndense_layers)
+
             print(model.summary())
             dname = cvout.replace(".csv", "")
             b = batch_size_

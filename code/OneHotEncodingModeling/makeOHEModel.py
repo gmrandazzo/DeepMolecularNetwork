@@ -5,6 +5,9 @@
 # You can use,modify, and distribute it under
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 import argparse
 from pathlib import Path
@@ -29,7 +32,7 @@ from keras import backend as K
 # Some memory clean-up
 K.clear_session()
 
-import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
