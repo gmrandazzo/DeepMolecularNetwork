@@ -606,11 +606,11 @@ class NNTrain(object):
             predictions[key] = []
             recalc[key] = []
 
-        for dataset_keys, val_keys in RepeatedKFold(n_splits,
-                                                    n_repeats,
-                                                    self.target):
+        for dataset_keys, test_keys in RepeatedKFold(n_splits,
+                                                     n_repeats,
+                                                     self.target):
             print("Dataset size: %d Validation  size %d" % (len(dataset_keys),
-                                                            len(val_keys)))
+                                                            len(test_keys)))
 
             sub_target = {}
             for key in dataset_keys:
@@ -618,14 +618,14 @@ class NNTrain(object):
 
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-            train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
+            train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.20)
 
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
-            x_test, y_test, rtest_keys = self.GenData(test_keys)
             x_val, y_val, rval_keys = self.GenData(val_keys)
+            x_test, y_test, rtest_keys = self.GenData(test_keys)
 
-            print("Train set size: %d Test set size %d" % (len(train_keys),
-                                                           len(test_keys)))
+            print("Train set size: %d Validation set size %d" % (len(train_keys),
+                                                                 len(val_keys)))
 
             model = None
             model_ = GetKerasModel()
@@ -655,7 +655,7 @@ class NNTrain(object):
             dname = cvout.replace(".csv", "")
             b = 0
             if batch_size_ is None:
-                b = len(x_test)
+                b = len(x_val)
             else:
                 b = batch_size_
 
@@ -691,7 +691,7 @@ class NNTrain(object):
                                 steps_per_epoch=steps_per_epochs_,
                                 epochs=num_epochs,
                                 verbose=1,
-                                validation_data=(x_test, y_test),
+                                validation_data=(x_val, y_val),
                                 # validation_data=test_generator,
                                 # validation_steps=test_steps_per_epoch,
                                 callbacks=callbacks_)
@@ -701,7 +701,7 @@ class NNTrain(object):
                       batch_size=b,
                       steps_per_epochs=steps_per_epochs_,
                       verbose=1,
-                      validation_data=(x_test, y_test),
+                      validation_data=(x_val, y_val),
                       callbacks=callbacks_)
             """
             # WARNING Implement cross validation results for multiple outputs
@@ -711,14 +711,14 @@ class NNTrain(object):
             for i in range(len(yrecalc)):
                 recalc[train_keys[i]].extend(list(yrecalc[i]))
 
-            ypred_test = bestmodel.predict(x_test)
-            print("Test R2: %.4f" % (r2_score(y_test, ypred_test)))
+            ypred_val = bestmodel.predict(x_val)
+            print("Test R2: %.4f" % (r2_score(y_val, ypred_val)))
 
-            ypred = bestmodel.predict(x_val)
+            ypred_test = bestmodel.predict(x_test)
             # exp_pred_plot(y_val_, ypred[:,0])
-            print("Validation R2: %.4f" % (r2_score(y_val, ypred)))
-            for i in range(len(ypred)):
-                predictions[val_keys[i]].extend(list(ypred[i]))
+            print("Validation R2: %.4f" % (r2_score(y_test, ypred_test)))
+            for i in range(len(ypred_test)):
+                predictions[test_keys[i]].extend(list(ypred_test[i]))
 
             """
             if fimpfile is not None:
@@ -750,8 +750,10 @@ class NNTrain(object):
                     y_test_.append(y_test[i][j])
                     ypred_test_.append(ypred_test[i][j])
                 print("Output %d R2: %.4f Q2: %.4f" % (j,
-                                                       r2_score(y_train_, yrecalc_),
-                                                       r2_score(y_test_, ypred_test_)))
+                                                       r2_score(y_train_,
+                                                                yrecalc_),
+                                                       r2_score(y_test_,
+                                                                ypred_test_)))
         else:
             for i in range(len(rtest_keys)):
                 fo.write("%s,%f,%f\n" % (rtest_keys[i],
@@ -760,7 +762,6 @@ class NNTrain(object):
             fo.close()
             print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
                                          r2_score(y_test, ypred_test)))
-
 
         fo = open(cvout, "w")
         if self.tgtshape > 1:
