@@ -33,6 +33,8 @@ from keras import backend as K
 K.clear_session()
 
 
+from OHEDatabase import OHEDatabase
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
@@ -270,48 +272,21 @@ def build_gridsearch_model(dshape, n_conv, nfilters, ndense_layers, nunits):
 
 
 class NNTrain(object):
-    def __init__(self, ohe_dir, target, dx=None, n_descs=None):
-        self.X, self.input_shape = self.LoadOneHotEncoding(ohe_dir)
+    def __init__(self, ohedb_path, target, dx=None, n_descs=None):
+        self.db = OHEDatabase()
+        self.db.loadOHEdb(ohedb_path)
         self.target = target
         self.dx = dx
         self.n_descs = n_descs
         self.verbose = 1
 
-    def ReadOneHotEncodingCSV(self, ohe_csv):
-        f = open(ohe_csv, "r")
-        m = []
-        x = []
-        for line in f:
-            if "END" in line:
-                m.append(np.array(x).astype('float'))
-                del x[:]
-            else:
-                x.append(str.split(line.strip(), ","))
-        f.close()
-        return np.array(m)
-
-    def LoadOneHotEncoding(self, ohe_dir):
-        p = Path(ohe_dir).glob('**/*')
-        X = {}
-        for x in p:
-            if x.is_file() and ".csv" in str(x):
-                key = x.resolve().stem.split(".")[0]
-                # Each molecule can have multiple smiles structure
-                # representations
-                X[key] = self.ReadOneHotEncodingCSV(x)
-            else:
-                continue
-        return X, list(X.values())[0].shape[1:]
-
     def DataGenerator(self, keys, batch_size_=200):
         """ to be used with fit_generator and steps_per_epoch"""
         if self.dx is not None:
-            keylst = list(set(list(self.X.keys())).intersection(list(self.target.keys())))
+            keylst = list(set(list(self.db.X.keys())).intersection(list(self.target.keys())))
             keylst = list(set(keylst).intersection(list(self.dx.keys())))
             keylst = list(set(keylst).intersection(keys))
-
             size_tkeys = len(keylst)
-
             if size_tkeys < batch_size_:
                 # Give the entire keylist dataset... no random selection
                 while True:
@@ -322,14 +297,14 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        smiohes = self.X[key_]
+                        smiohes = self.db.X[key_]
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.X[key_][k]
+                            smiohe = self.db.X[key_][k]
                         else:
-                            smiohe = self.X[key_][0]
+                            smiohe = self.db.X[key_][0]
                         bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
@@ -349,14 +324,14 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        smiohes = self.X[key_]
+                        smiohes = self.db.X[key_]
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.X[key_][k]
+                            smiohe = self.db.X[key_][k]
                         else:
-                            smiohe = self.X[key_][0]
+                            smiohe = self.db.X[key_][0]
                         bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
@@ -366,10 +341,9 @@ class NNTrain(object):
                     batch_x_bh2 = np.array(batch_x_bh2).astype(float)
                     yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
         else:
-            keylst = list(set(list(self.X.keys())).intersection(list(self.target.keys())))
+            keylst = list(set(list(self.db.X.keys())).intersection(list(self.target.keys())))
             keylst = list(set(keylst).intersection(keys))
             size_tkeys = len(keylst)
-
             if size_tkeys < batch_size_:
                 while True:
                     random.seed(datetime.now().microsecond)
@@ -378,14 +352,14 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        smiohes = self.X[key_]
+                        smiohes = self.db.X[key_]
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.X[key_][k]
+                            smiohe = self.db.X[key_][k]
                         else:
-                            smiohe = self.X[key_][0]
+                            smiohe = self.db.X[key_][0]
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
@@ -399,14 +373,14 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        smiohes = self.X[key_]
+                        smiohes = self.db.X[key_]
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.X[key_][k]
+                            smiohe = self.db.X[key_][k]
                         else:
-                            smiohe = self.X[key_][0]
+                            smiohe = self.db.X[key_][0]
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
@@ -423,7 +397,7 @@ class NNTrain(object):
                     tval = self.target[key]
                     cfeat = self.dx[key]
                     batch_y.append(tval)
-                    smiohes = self.X[key]
+                    smiohes = self.db.X[key]
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:
@@ -446,7 +420,7 @@ class NNTrain(object):
             for key in keys:
                 try:
                     tval = self.target[key]
-                    smiohes = self.X[key]
+                    smiohes = self.db.X[key]
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:
@@ -467,8 +441,6 @@ class NNTrain(object):
                                                               shape[2], 1)
             """
             batch_features = np.array(batch_features)[:, :, :, np.newaxis]
-            print("AUUUUU")
-            print(batch_features.shape)
             return batch_features, np.array(batch_target), ret_keys
 
     def simplerun(self,
@@ -489,20 +461,20 @@ class NNTrain(object):
         if self.dx is not None:
             print("Number of descriptors: %d" % (self.n_descs))
             if model_ is None:
-                model = example_build_2DData_model(self.input_shape,
+                model = example_build_2DData_model(self.db.input_shape,
                                                    self.n_descs,
                                                    nfilters,
                                                    nunits)
             else:
-                model = model_(self.input_shape,
+                model = model_(self.db.input_shape,
                                self.n_descs,
                                nfilters,
                                nunits)
         else:
             if model_ is None:
-                model = example_build_model(self.input_shape, nfilters, nunits)
+                model = example_build_model(self.db.input_shape, nfilters, nunits)
             else:
-                model = model_(self.input_shape, nfilters, nunits)
+                model = model_(self.db.input_shape, nfilters, nunits)
 
         print(model.summary())
 
@@ -624,6 +596,7 @@ class NNTrain(object):
         predictions = {}
         recalc = {}
         for key in self.target.keys():
+            # N.B.: each molecule can have multiple outputs.
             predictions[key] = []
             recalc[key] = []
 
@@ -652,22 +625,22 @@ class NNTrain(object):
             if self.dx is not None:
                 print("Number of descriptors: %d" % (self.n_descs))
                 if model_ is None:
-                    model = example_build_2DData_model(self.input_shape,
+                    model = example_build_2DData_model(self.db.input_shape,
                                                        self.n_descs,
                                                        nfilters,
                                                        nunits)
                 else:
-                    model = model_(self.input_shape,
+                    model = model_(self.db.input_shape,
                                    self.n_descs,
                                    nfilters,
                                    nunits)
             else:
                 if model_ is None:
-                    model = example_build_model(self.input_shape,
+                    model = example_build_model(self.db.input_shape,
                                                 nfilters,
                                                 nunits)
                 else:
-                    model = model_(self.input_shape,
+                    model = model_(self.db.input_shape,
                                    nfilters,
                                    nunits)
 
@@ -724,7 +697,7 @@ class NNTrain(object):
                       validation_data=(x_test, y_test),
                       callbacks=callbacks_)
             """
-
+            # WARNING Implement cross validation results for multiple outputs
             bestmodel = load_model(model_output,
                                    custom_objects={"score": score})
             yrecalc = bestmodel.predict(x_train)
@@ -751,32 +724,93 @@ class NNTrain(object):
             cv_ += 1
 
         fo = open(cvout, "w")
-        for key in predictions.keys():
-            fo.write("%s," % (key))
-            if len(predictions[key]) > 0:
-                freq = len(predictions[key])
-                ypavg = np.mean(predictions[key])
-                ystdev = np.std(predictions[key])
-                res = self.target[key] - ypavg
-                fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (self.target[key],
-                                                      ypavg,
-                                                      ystdev,
-                                                      res,
-                                                      freq))
-            else:
-                fo.write("%.4f,0.0,0.0,0.0," % (self.target[key]))
+        if self.y.shape[1] > 1:
+            for i in range(len(rtest_keys)):
+                fo.write("%s," % (rtest_keys[i]))
+                for j in range(len(y_test[i])-1):
+                    fo.write("%f,%f," % (y_test[i][j], ypred_test[i][j]))
+                fo.write("%f,%f\n" % (y_test[i][-1], ypred_test[i][-1]))
+            fo.close()
+            # Then calculate R2 and Q2 for each output...
+            for j in range(ypred_test.shape[1]):
+                y_train_ = []
+                yrecalc_ = []
+                y_test_ = []
+                ypred_test_ = []
+                for i in range(ypred_test.shape[0]):
+                    y_train_.append(y_train[i][j])
+                    yrecalc_.append(yrecalc[i][j])
+                    y_test_.append(y_test[i][j])
+                    ypred_test_.append(ypred_test[i][j])
+                print("Output %d R2: %.4f Q2: %.4f" % (j,
+                                                       r2_score(y_train_, yrecalc_),
+                                                       r2_score(y_test_, ypred_test_)))
+        else:
+            for i in range(len(rtest_keys)):
+                fo.write("%s,%f,%f\n" % (rtest_keys[i],
+                                         y_test[i],
+                                         ypred_test[i]))
+            fo.close()
+            print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
+                                         r2_score(y_test, ypred_test)))
 
-            if len(recalc[key]) > 0:
-                freq_r = len(recalc[key])
-                ypavg_r = np.mean(recalc[key])
-                ystdev_r = np.std(recalc[key])
-                res_r = self.target[key] - ypavg_r
-                fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
-                                                  ystdev_r,
-                                                  res_r,
-                                                  freq_r))
-            else:
-                fo.write("0.0,0.0,0.0\n")
+
+        fo = open(cvout, "w")
+        if self.y.shape[1] > 1:
+            for key in predictions.keys():
+                fo.write("%s," % (key))
+
+                if len(predictions[key]) > 0:
+                    freq = len(predictions[key])
+                    ypavg = np.mean(predictions[key])
+                    ystdev = np.std(predictions[key])
+                    res = self.target[key] - ypavg
+                    fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (self.target[key],
+                                                          ypavg,
+                                                          ystdev,
+                                                          res,
+                                                          freq))
+                else:
+                    fo.write("%.4f,0.0,0.0,0.0," % (self.target[key]))
+
+                if len(recalc[key]) > 0:
+                    freq_r = len(recalc[key])
+                    ypavg_r = np.mean(recalc[key])
+                    ystdev_r = np.std(recalc[key])
+                    res_r = self.target[key] - ypavg_r
+                    fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
+                                                      ystdev_r,
+                                                      res_r,
+                                                      freq_r))
+                else:
+                    fo.write("0.0,0.0,0.0\n")
+        else:
+            for key in predictions.keys():
+                fo.write("%s," % (key))
+                if len(predictions[key]) > 0:
+                    freq = len(predictions[key])
+                    ypavg = np.mean(predictions[key])
+                    ystdev = np.std(predictions[key])
+                    res = self.target[key] - ypavg
+                    fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (self.target[key],
+                                                          ypavg,
+                                                          ystdev,
+                                                          res,
+                                                          freq))
+                else:
+                    fo.write("%.4f,0.0,0.0,0.0," % (self.target[key]))
+
+                if len(recalc[key]) > 0:
+                    freq_r = len(recalc[key])
+                    ypavg_r = np.mean(recalc[key])
+                    ystdev_r = np.std(recalc[key])
+                    res_r = self.target[key] - ypavg_r
+                    fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
+                                                      ystdev_r,
+                                                      res_r,
+                                                      freq_r))
+                else:
+                    fo.write("0.0,0.0,0.0\n")
         fo.close()
 
     def runloo(self, batch_size_, num_epochs, ndense_layers, nunits, cvout):
