@@ -169,24 +169,72 @@ def DISCTrainTestSplit(dict_target, n_objects=0):
     return train_keys, test_keys
 
 
-def RepeatedKFold(n_splits, n_repeats, dict_target):
+def RepeatedKFold(n_splits, n_repeats, dict_target, seed_val=None):
     """
     Repeated K-fold cross validation method starting from a dictionary target
     """
-    indexes = [i for i in range(len(dict_target))]
+    if seed_val is None:
+        random.seed(datetime.now().microsecond)
+    else:
+        random.seed(seed_val)
     keys = list(dict_target.keys())
-    for i in range(n_repeats):
+    indexes = [i for i in range(len(keys))]
+    maxgobj = int(ceil(len(keys)/float(n_splits)))
+    for r in range(n_repeats):
         random.shuffle(indexes)
-        for j in range(n_splits):
+        appgroup = []
+        n = 0
+        g = 0
+        for i in range(len(keys)):
+            if n == maxgobj:
+                n = 0
+                g += 1
+                appgroup.append(g)
+            else:
+                appgroup.append(g)
+                n += 1
+
+        for g in range(n_splits):
             train_keys = []
             test_keys = []
-            for k in range(len(dict_target)):
-                if k % n_splits != j:
-                    train_keys.append(keys[indexes[k]])
-                else:
+            for k in range(len(keys)):
+                if appgroup[k] == g:
                     test_keys.append(keys[indexes[k]])
-            yield (train_keys,
-                   test_keys)
+                else:
+                    train_keys.append(keys[indexes[k]])
+            yield (train_keys, test_keys)
+
+
+def KFold(n_splits, dict_target, seed_val=None):
+    if seed_val is None:
+        random.seed(datetime.now().microsecond)
+    else:
+        random.seed(seed_val)
+    keys = list(dict_target.keys())
+    indexes = [i for i in range(len(keys))]
+    random.shuffle(indexes)
+    appgroup = []
+    maxgobj = int(ceil(len(keys)/float(n_splits)))
+    n = 0
+    g = 0
+    for i in range(len(keys)):
+        if n == maxgobj:
+            n = 0
+            g += 1
+            appgroup.append(g)
+        else:
+            appgroup.append(g)
+            n += 1
+
+    for g in range(n_splits):
+        train_keys = []
+        test_keys = []
+        for k in range(len(keys)):
+            if appgroup[k] == g:
+                test_keys.append(keys[indexes[k]])
+            else:
+                train_keys.append(keys[indexes[k]])
+        yield (train_keys, test_keys)
 
 
 def CVGroupRead(fcvgroup):

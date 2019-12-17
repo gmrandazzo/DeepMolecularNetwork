@@ -276,6 +276,12 @@ class NNTrain(object):
         self.db = OHEDatabase()
         self.db.loadOHEdb(ohedb_path)
         self.target = target
+        self.tgtshape = None
+        try:
+            self.tgtshape = len(list(target.values())[0])
+        except:
+            self.tgtshape = 1
+        print(self.tgtshape)
         self.dx = dx
         self.n_descs = n_descs
         self.verbose = 1
@@ -609,6 +615,7 @@ class NNTrain(object):
             sub_target = {}
             for key in dataset_keys:
                 sub_target[key] = self.target[key]
+
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
@@ -724,7 +731,7 @@ class NNTrain(object):
             cv_ += 1
 
         fo = open(cvout, "w")
-        if self.y.shape[1] > 1:
+        if self.tgtshape > 1:
             for i in range(len(rtest_keys)):
                 fo.write("%s," % (rtest_keys[i]))
                 for j in range(len(y_test[i])-1):
@@ -756,7 +763,7 @@ class NNTrain(object):
 
 
         fo = open(cvout, "w")
-        if self.y.shape[1] > 1:
+        if self.tgtshape > 1:
             for key in predictions.keys():
                 fo.write("%s," % (key))
 
