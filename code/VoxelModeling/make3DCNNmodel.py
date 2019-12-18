@@ -409,7 +409,7 @@ def cv(db,
     cv_ = 0
 
     predictions = dict()
-    testpred = dict()
+    valpredictions = dict()
     """
     recalc = dict()
 
@@ -423,7 +423,7 @@ def cv(db,
     for key in ai.target.keys():
         # ai.target[key] *= 100
         predictions[key] = []
-        testpred[key] = []
+        valpredictions[key] = []
 
     feat_imp = None
     feat_imp_iterations = 20
@@ -460,18 +460,19 @@ def cv(db,
     else:
         cvmethod = RepeatedKFold(n_splits_, n_repeats_, ai.target)
 
-    for dataset_keys, val_keys in cvmethod:
-        print("Dataset set size: %d Validation set size %d" % (len(dataset_keys), len(val_keys)))
+    for dataset_keys, test_keys in cvmethod:
+        print("Dataset set size: %d Test set size %d" % (len(dataset_keys),
+                                                         len(test_keys)))
         train_keys = None
-        test_keys = None
+        val_keys = None
 
         sub_target = {}
         for key in dataset_keys:
             sub_target[key] = ai.target[key]
         # get the 20% of the dataset to build a NN test set
-        ntobj = int(np.ceil(len(sub_target)*0.2))
+        # ntobj = int(np.ceil(len(sub_target)*0.2))
         # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-        train_keys, test_keys = DISCTrainTestSplit(sub_target)
+        train_keys, vak_keys = DISCTrainTestSplit(sub_target)
 
         train_generator = ai.VoxelTrainGenerator(train_keys, n_rot_train)
 
@@ -545,16 +546,15 @@ def cv(db,
                                     mode='auto')]
         """
 
-
         x_test_, y_test_ = ai.VoxelTestSetGenerator(test_keys, n_rot_test)
         x_val_, y_val_ = ai.VoxelTestSetGenerator(val_keys, n_rot_test)
-        test_generator = ai.VoxelTrainGenerator(test_keys, n_rot_test)
+        val_generator = ai.VoxelTrainGenerator(val_keys, n_rot_test)
         model.fit_generator(train_generator,
                             epochs=num_epochs,
                             steps_per_epoch=train_steps_per_epoch_,
                             verbose=1,
                             # validation_data=(x_test_, y_test_),
-                            validation_data=test_generator,
+                            validation_data=val_generator,
                             validation_steps=test_steps_per_epoch_,
                             callbacks=callbacks_)
         """
@@ -581,29 +581,29 @@ def cv(db,
         # Predict the test set
         ypred_test = model.predict(x_test_)
         # exp_pred_plot(y_test_, ypred_test[:,0])
-        print("Test R2: %.4f" % (r2_score(y_test_, ypred_test)))
+        print("Test Q2: %.4f" % (r2_score(y_test_, ypred_test)))
+
+        # Predict the validation set
+        ypred_val = model.predict(x_val_)
+        # exp_pred_plot(y_val_, ypred[:,0])
+        print("Validation R2: %.4f" % (r2_score(y_val_, ypred_val)))
 
         # Store the test prediction result
         k = 0
         c = 0
-        for i in range(len(ypred_test)):
-            testpred[test_keys[k]].extend(list(ypred_test[i]))
+        for i in range(len(ypred_val)):
+            valpredictions[test_keys[k]].extend(list(ypred_val[i]))
             if c == n_rot_test-1:
                 k += 1
                 c = 0
             else:
                 c += 1
 
-        # Predict the validation set
-        ypred = model.predict(x_val_)
-        # exp_pred_plot(y_val_, ypred[:,0])
-        print("Validation R2: %.4f" % (r2_score(y_val_, ypred)))
-
         # Store the cross validation result
         k = 0
         c = 0
-        for i in range(len(ypred)):
-            predictions[val_keys[k]].extend(list(ypred[i]))
+        for i in range(len(ypred_test)):
+            predictions[test_keys[k]].extend(list(ypred_test[i]))
             if c == n_rot_test-1:
                 k += 1
                 c = 0
@@ -626,24 +626,23 @@ def cv(db,
         The error estimation utilised is the mean squared error calculated with this formula
         mse = (np.square(A - B)).mean(axis=0)
         """
-        if feat_imp != None:
-            # e_orig = MSE(list(y_val_), list(ypred))
-            e_orig = MAE(list(y_val_), list(ypred))
-
+        if feat_imp is not None:
+            # e_orig = MSE(list(y_test_), list(ypred))
+            e_orig = MAE(list(y_test_), list(ypred_test))
             # calculate the feature importance for the descriptors
             for fid_ in range(ai.nfeatures):
                 for it in range(feat_imp_iterations):
                     x_val_perm = ai.FeaturePermutation(x_val_, fid=fid_)
                     ypred_perm = model.predict(x_val_perm)
-                    # e_perm = MSE(list(y_val_), list(ypred_perm))
-                    e_perm = MAE(list(y_val_), list(ypred_perm))
+                    # e_perm = MSE(list(y_test_), list(ypred_perm))
+                    e_perm = MAE(list(y_test_), list(ypred_perm))
                     feat_imp[fid_].append(e_perm/e_orig)
 
             # Calculate the feature importance for the voxel information
             for it in range(feat_imp_iterations):
                 x_val_perm = ai.FeaturePermutation(x_val_, fid=9999)
                 ypred_perm = model.predict(x_val_perm)
-                e_perm = MAE(list(y_val_), list(ypred_perm))
+                e_perm = MAE(list(y_test_), list(ypred_perm))
                 feat_imp[-1].append(e_perm/e_orig)
 
         if mout_path is not None:
@@ -668,10 +667,10 @@ def cv(db,
             else:
                 fo.write("%.4f,0.0,0.0,0.0," % (ai.target[key]))
 
-            if len(testpred[key]) > 0:
-                freq_r = len(testpred[key])
-                ypavg_r = np.mean(testpred[key])
-                ystdev_r = np.std(testpred[key])
+            if len(valpredictions[key]) > 0:
+                freq_r = len(valpredictions[key])
+                ypavg_r = np.mean(valpredictions[key])
+                ystdev_r = np.std(valpredictions[key])
                 res_r = ai.target[key] - ypavg_r
                 fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
                                                   ystdev_r,
@@ -696,14 +695,24 @@ def cv(db,
                 med_a = np.percentile(a, 50)
                 q3 = np.percentile(a, 75)
                 max_a = a.max()
-                fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % (ai.header[i], min_a, q1, med_a, q3, max_a))
+                fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % (ai.header[i],
+                                                            min_a,
+                                                            q1,
+                                                            med_a,
+                                                            q3,
+                                                            max_a))
             a = np.array(feat_imp[-1])
             min_a = a.min()
             q1 = np.percentile(a, 25)
             med_a = np.percentile(a, 50)
             q3 = np.percentile(a, 75)
             max_a = a.max()
-            fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % ("qm_voxel_charge", min_a, q1, med_a, q3, max_a))
+            fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % ("qm_voxel_charge",
+                                                        min_a,
+                                                        q1,
+                                                        med_a,
+                                                        q3,
+                                                        max_a))
             """
             fo.write("%s,\n" % ("qm_voxel_charge"))
             for j in range(len(feat_imp[-1])-1):

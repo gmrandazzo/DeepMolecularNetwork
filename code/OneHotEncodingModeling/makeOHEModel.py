@@ -478,7 +478,9 @@ class NNTrain(object):
                                nunits)
         else:
             if model_ is None:
-                model = example_build_model(self.db.input_shape, nfilters, nunits)
+                model = example_build_model(self.db.input_shape,
+                                            nfilters,
+                                            nunits)
             else:
                 model = model_(self.db.input_shape, nfilters, nunits)
 

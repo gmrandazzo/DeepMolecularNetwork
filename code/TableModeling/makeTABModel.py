@@ -64,6 +64,7 @@ def score(y_true, y_pred):
     return K.log(K.mean(K.abs(y_true - y_pred), axis=-1))
 """
 
+
 def example_build_model(nfeatures, nunits, ndense_layers):
     model = Sequential()
     # model.add(Conv1D(16, kernel_size=7, strides=1, activation="relu", input_shape=(nfeatures,)))
@@ -584,11 +585,11 @@ class NNTrain(object):
             predictions[key] = []
             recalc[key] = []
 
-        for dataset_keys, val_keys in RepeatedKFold(n_splits,
-                                                    n_repeats,
-                                                    self.target):
-            print("Dataset size: %d Validation  size %d" % (len(dataset_keys),
-                                                            len(val_keys)))
+        for dataset_keys, test_keys in RepeatedKFold(n_splits,
+                                                     n_repeats,
+                                                     self.target):
+            print("Dataset size: %d Test  size %d" % (len(dataset_keys),
+                                                      len(test_keys)))
 
             sub_target = {}
             for key in dataset_keys:
@@ -596,7 +597,7 @@ class NNTrain(object):
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             # train_keys, test_keys = DISCTrainTestSplit(sub_target)
-            train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
+            train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.20)
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
             # x_train, y_train = self.GenData(train_keys)
@@ -605,8 +606,8 @@ class NNTrain(object):
             # test_generator = self.DataGenerator(test_keys, batch_size_)
             x_test, y_test = self.GenData(test_keys)
             x_val, y_val = self.GenData(val_keys)
-            print("Train set size: %d Test set size %d" % (len(train_keys),
-                                                           len(test_keys)))
+            print("Train set size: %d Val set size %d" % (len(train_keys),
+                                                          len(val_keys)))
 
             model = None
             model_ = GetKerasModel()
@@ -661,7 +662,7 @@ class NNTrain(object):
                                 steps_per_epoch=train_steps_per_epoch,
                                 epochs=num_epochs,
                                 verbose=1,
-                                validation_data=(x_test, y_test),
+                                validation_data=(x_val, y_val),
                                 # validation_data=test_generator,
                                 # validation_steps=test_steps_per_epoch,
                                 callbacks=callbacks_)
@@ -692,15 +693,15 @@ class NNTrain(object):
             print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f" % (r2, q2, tr2))
 
             # Store validation prediction
-            for i in range(len(ypred_val)):
-                predictions[val_keys[i]].extend(list(ypred_val[i]))
+            for i in range(len(ypred_test)):
+                predictions[test_keys[i]].extend(list(ypred_test[i]))
 
             # Store the cross validation model
             #if mout_path is not None:
             #    model.save("%s/%d.h5" % (str(mout_path.absolute()), cv_))
 
             if fimpfile is not None:
-                fimp = FeatureImportance(model, x_val, y_val, self.xheader)
+                fimp = FeatureImportance(model, x_test, y_test, self.xheader)
                 fires = fimp.Calculate(verbose=1)
                 for key in fires.keys():
                     feat_imp[key]['mae'].extend(fires[key]['mae'])
@@ -760,7 +761,7 @@ class NNTrain(object):
             x_train, y_train = self.GenData(train_keys)
             x_test, y_test = self.GenData(test_keys)
 
-            model = build_model(self.nfeatures, nunits, ndense_layers)
+            model = example_build_model(self.nfeatures, nunits, ndense_layers)
             print(model.summary())
             b = 0
             if batch_size_ is None:
@@ -810,7 +811,11 @@ class NNTrain(object):
                           batch_size_,
                           num_epochs,
                           models_path,
-                          cvout):
+                          n_splits,
+                          n_repeats,
+                          mout,
+                          cvout,
+                          fimpfile):
         print("N. instances: %d" % (len(self.target)))
         models, odesc = LoadKerasModels(models_path, {"score": score})
 
@@ -861,7 +866,7 @@ class NNTrain(object):
             print("Train set size: %d Test set size %d" % (len(train_keys),
                                                            len(test_keys)))
 
-            model = build_model(self.nfeatures, nunits, ndense_layers)
+            model = example_build_model(self.nfeatures, nunits, ndense_layers)
             print(model.summary())
             dname = cvout.replace(".csv", "")
             b = batch_size_
@@ -903,7 +908,7 @@ class NNTrain(object):
             model.fit_generator(train_generator,
                                 steps_per_epoch=train_steps_per_epoch,
                                 epochs=num_epochs,
-                                verbose=1,
+                                verbose=self.verbose,
                                 validation_data=(x_test, y_test),
                                 # validation_data=test_generator,
                                 # validation_steps=test_steps_per_epoch,
@@ -1053,7 +1058,7 @@ def main():
             target[key] = np.array(target[key]).astype(float)
         """
         nn = NNTrain(X_raw, target, xheader)
-        nn.verbose = 1
+        nn.verbose = 0
         if args.cvout is None and args.gsout is None:
             nn.simplerun(args.batch_size,
                          args.epochs,
@@ -1071,9 +1076,9 @@ def main():
                      args.mout,
                      args.featimp)
         else:
-          nn.GridSearch(args.batch_size,
-                        args.epochs,
-                        args.gsout)
+            nn.GridSearch(args.batch_size,
+                          args.epochs,
+                          args.gsout)
 
 
 if __name__ == '__main__':
