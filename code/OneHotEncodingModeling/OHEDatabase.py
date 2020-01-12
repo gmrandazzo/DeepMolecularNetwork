@@ -69,6 +69,9 @@ class OHEDatabase(object):
         for p in Path(dbpath).iterdir():
             if p.is_file() and ".npy" in str(p):
                 name = p.resolve().stem.split(".")[0]
+                # Loading take too much time...
+                # Hence would be better to load the files while 
+                # the program is executed.
                 print("Loading %s" % (name))
                 arr = np.load(str(p),
                               mmap_mode=None)

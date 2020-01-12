@@ -317,18 +317,14 @@ def ReadTarget(csv_target, sep=","):
         if "Molecule" in line or "Object Names" in line:
             continue
         else:
-            if len(v) > 2:
-                if v[0] not in d.keys():
-                    d[v[0]] = []
-                for item in v[1:]:
-                    d[v[0]].append(float(item))
-            else:
-                d[v[0]] = float(v[1])
+            if v[0] not in d.keys():
+                d[v[0]] = []
+            for item in v[1:]:
+                d[v[0]].append(float(item))
     fi.close()
     for key in d.keys():
         d[key] = np.array(d[key]).astype(float)
     return d
-
 
 def GetKerasModel():
     p = Path('.')
@@ -341,6 +337,14 @@ def GetKerasModel():
         print("with a build_model function.")
         return None
 
+def GetLoadModelFnc():
+    p = Path('.')
+    sys.path.append("%s" % (str(p.absolute())))
+    try:
+        from model import load_personal_model
+        return load_personal_model
+    except ImportError:
+        return load_model
 
 def LoadKerasModels(mpath, custom_objects_=None):
     """
@@ -367,3 +371,5 @@ def LoadKerasModels(mpath, custom_objects_=None):
             odesc.append(line.strip())
         f.close()
     return models, odesc
+
+
