@@ -724,7 +724,7 @@ def main():
                          args.epochs,
                          args.ndense_layers,
                          args.nunits,
-                         args.m)
+                         args.mout)
         elif args.cvout is not None and args.gsout is None:
             nn.runcv(args.batch_size,
                      args.epochs,
