@@ -642,19 +642,18 @@ class NNTrain(object):
             y_true_recalc = []
             for key in train_keys:
                 row = np.array([self.X_raw[key]])
-                p = model_.predict(row)
-                y_recalc.extend(p)
+                p = model_.predict(row)[0] # we process compound by compound
+                y_recalc.append(p)
                 y_true_recalc.append(self.target[key])
-                recalc[key].extend(list(p))
+                recalc[key].extend(p)
 
             ypred_test = model_.predict(x_test)
             ypred_val = model_.predict(x_val)
             
-            print(np.array(y_true_recalc).shape)
             r2 = RSQ(y_true_recalc, y_recalc)
             q2 = RSQ(y_test, ypred_test)
             tr2 = RSQ(y_val, ypred_val)
-            print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f" % (r2, q2, tr2))
+            print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2, q2, tr2))
             
 
             # Store validation prediction
