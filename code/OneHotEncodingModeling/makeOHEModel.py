@@ -15,10 +15,24 @@ import numpy as np
 import random
 from datetime import datetime
 from keras import optimizers
-from keras.callbacks import Callback, ModelCheckpoint, TensorBoard
-from keras.models import Model, Input, Sequential
+from keras.callbacks import Callback
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import TensorBoard
+
+from keras.models import Model
+from keras.models import Input
+from keras.models import Sequential
 from keras.models import load_model
-from keras.layers import Conv2D, Flatten, Dense, Dropout, Activation, MaxPooling2D, ZeroPadding2D, BatchNormalization, AveragePooling2D, Concatenate
+from keras.layers import Conv2D
+from keras.layers import Flatten
+from keras.layers import Dense
+from keras.layers import Dropout
+from keras.layers import Activation
+from keras.layers import MaxPooling2D
+from keras.layers import ZeroPadding2D
+from keras.layers import BatchNormalization
+from keras.layers import AveragePooling2D
+from keras.layers import Concatenate
 from keras.utils import np_utils
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error as mae
@@ -38,13 +52,19 @@ from OHEDatabase import OHEDatabase
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
-from misc import GetKerasModel
-from misc import MDCTrainTestSplit
-from misc import TrainTestSplit
-from misc import RepeatedKFold
-from misc import ReadDescriptors
-from misc import ReadTarget
+from modelhelpers import GetKerasModel
+from modelhelpers import GetLoadModelFcn
+from modelhelpers import LoadKerasModels
 
+from modelvalidation import MDCTrainTestSplit
+from moedlvalidation import TrainTestSplit
+from modelvalidation import RepeatedKFold
+
+from dmnnio import ReadDescriptors
+from dmnnio import ReadTarget
+from dmnnio import WriteCrossValidationOutput
+
+from numpy_loss_functions import RS
 from keras_additional_loss_functions import rmse
 from keras_additional_loss_functions import score
 from keras_additional_loss_functions import np_score
@@ -568,9 +588,11 @@ class NNTrain(object):
                                                        r2_score(y_test_, ypred_test_)))
         else:
             for i in range(len(rtest_keys)):
-                fo.write("%s,%f,%f\n" % (rtest_keys[i],
-                                         y_test[i],
-                                         ypred_test[i]))
+                fo.write("%s" % (rtest_keys[i]))
+                for j in range(len(y_test[i])):
+                    fo.write("%f,%f" % (y_test[i],
+                                        ypred_test[i]))
+                fo.write("\n")
             fo.close()
             print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
                                          r2_score(y_test, ypred_test)))
@@ -732,6 +754,8 @@ class NNTrain(object):
             """
             cv_ += 1
 
+        WriteCrossValidationOutput(cvout, self.target, predictions, recalc)
+        """
         fo = open(cvout, "w")
         if self.tgtshape > 1:
             for i in range(len(rtest_keys)):
@@ -822,6 +846,7 @@ class NNTrain(object):
                 else:
                     fo.write("0.0,0.0,0.0\n")
         fo.close()
+        """
 
     def runloo(self, batch_size_, num_epochs, ndense_layers, nunits, cvout):
         print("N. instances: %d" % (len(self.target)))

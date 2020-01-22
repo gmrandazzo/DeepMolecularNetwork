@@ -170,7 +170,7 @@ class NNTrain(object):
         i = 0
         for key in keys:
             try:
-                t = float(self.target[key])
+                t = self.target[key]
                 x = self.X_raw[key]
                 batch_target[i] = np.copy(t)
                 batch_features[i] = np.copy(x)
@@ -250,7 +250,7 @@ class NNTrain(object):
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
-        # train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
+        # train_steps_per_epoch = ceil(len(train_keys)/loat(batch_size_))
         # train_generator = self.DataGenerator(train_keys, batch_size_)
 
         x_train, y_train = self.GenData(train_keys)
@@ -527,7 +527,10 @@ class NNTrain(object):
 
         fo = open("%s_pred.csv" % time.strftime("%Y%m%d%H%M%S"), "w")
         for i in range(len(y_test)):
-            fo.write("%s,%f,%f\n" % (test_keys[i], y_test[i], ypred_test[i]))
+            fo.write("%s" % (test_keys[i]))
+            for j in range(len(y_test[i])):
+                fo.write(",%f,%f" % (y_test[i][j], ypred_test[i][j]))
+            fo.write("\n")
         fo.close()
 
         if model_output is not None:
