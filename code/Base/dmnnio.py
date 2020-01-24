@@ -62,7 +62,7 @@ def WriteCrossValidationOutput(outcsv,
         f.write(",y%d_true,y%d_pred,y%d_pred_stdev,y%d_pred_res,y%d_pred_freq" 
 % (i+1, i+1, i+1, i+1, i+1))
     for j in range(ncols):
-        f.write(",y%d_recalcy%d_recalc_stdev,y%d_recalc_res,y%d_recalc_freq" 
+        f.write(",y%d_recalc,y%d_recalc_stdev,y%d_recalc_res,y%d_recalc_freq" 
 % (i+1, i+1, i+1, i+1))
     f.write("\n")
     
@@ -71,7 +71,7 @@ def WriteCrossValidationOutput(outcsv,
     keys = list(set(keys))
     
     for key in keys:
-        f.write("%s," % (key))
+        f.write("%s" % (key))
         if key in prediction_dict.keys():
             for j in range(ncols):
                 freq = 0
@@ -89,7 +89,7 @@ def WriteCrossValidationOutput(outcsv,
                 if key in ground_true_dict.keys():
                     ytrue = float(ground_true_dict[key][j])
                 
-                f.write("%.4f,%.4f,%.4f,%.4f,%d" % (ytrue,
+                f.write(",%.4f,%.4f,%.4f,%.4f,%d" % (ytrue,
                                                     ypavg,
                                                     ypstdev,
                                                     ytrue-ypavg,
@@ -99,7 +99,7 @@ def WriteCrossValidationOutput(outcsv,
                 ytrue = 0.
                 if key in ground_true_dict.keys():
                     ytrue = ground_true_dict[key][j]
-                f.write("%.4f,0.0,0.0,0.0,0" % (ytrue))
+                f.write(",%.4f,0.0,0.0,0.0,0" % (ytrue))
         
         if key in recalculated_dict.keys():
             for j in range(ncols):
@@ -121,6 +121,6 @@ def WriteCrossValidationOutput(outcsv,
                                                 freq))
         else:
             for j in range(ncols):
-                f.write("0.0,0.0,0.0,0")
+                f.write(",0.0,0.0,0.0,0")
         f.write("\n")
     f.close()
