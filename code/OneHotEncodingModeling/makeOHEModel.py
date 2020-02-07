@@ -7,7 +7,7 @@
 # See the file LICENSE for details
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 import argparse
 from pathlib import Path
@@ -53,21 +53,20 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
 from modelhelpers import GetKerasModel
-from modelhelpers import GetLoadModelFcn
+from modelhelpers import GetLoadModelFnc
 from modelhelpers import LoadKerasModels
 
 from modelvalidation import MDCTrainTestSplit
-from moedlvalidation import TrainTestSplit
+from modelvalidation import TrainTestSplit
 from modelvalidation import RepeatedKFold
 
 from dmnnio import ReadDescriptors
 from dmnnio import ReadTarget
 from dmnnio import WriteCrossValidationOutput
 
-from numpy_loss_functions import RS
+from numpy_loss_functions import LOGMAE
 from keras_additional_loss_functions import rmse
 from keras_additional_loss_functions import score
-from keras_additional_loss_functions import np_score
 
 
 def example_build_2DData_model(dshape, input_shape2, nfilters, nunits):
@@ -1096,8 +1095,8 @@ class NNTrain(object):
                 q2 = r2_score(y_test, ypred_test)
                 mse_test = mse(y_test, ypred_test)
                 mae_test = mae(y_test, ypred_test)
-                train_score = np_score(y_train, yrecalc_train)
-                test_score = np_score(y_test, ypred_test)
+                train_score = LOGMAE(y_train, yrecalc_train)
+                test_score = LOGMAE(y_test, ypred_test)
                 print("R2: %.4f Train Score: %f Q2: %.4f Test Score: %f" % (r2, train_score, q2, test_score))
 
                 fo = open("%s" % (gmout), "a")
