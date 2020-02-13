@@ -11,41 +11,32 @@ from keras import backend as K
 K.clear_session()
 
 import argparse
-# from keras.callbacks import Callback, EarlyStopping, TensorBoard
-# from miscfun import exp_pred_plot
 from model_builder import *
-from keras.callbacks import TensorBoard, EarlyStopping
+from keras.callbacks import TensorBoard
+from keras.callbacks import ModelCheckpoint
 from keras.utils import plot_model
-
 import numpy as np
 from pathlib import Path
 import random
 import sys
-# from sklearn.model_selection import RepeatedKFold
-
-from scipy.spatial.distance import squareform
 from sklearn.model_selection import train_test_split
-# from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 import time
-# from tensorflow import set_random_seed
 from Voxel import LoadVoxelDatabase
 from datetime import datetime
-
 import os
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
-from misc import GetKerasModel
-from misc import ReadDescriptors
-from misc import ReadTarget
-from misc import MDCTrainTestSplit
-from misc import DISCTrainTestSplit
-from misc import RepeatedKFold
-from misc import CVGroupRead
-from misc import StaticGroupCV
-from misc import RepeatedStratifiedCV
-# os.environ['CUDA_VISIBLE_DEVICES']='0'
+from modelhelpers import GetKerasModel
+from modelhelpers import GetLoadModelFnc
+
+from dmnnio import ReadDescriptors
+from dmnnio import ReadTarget
+from modelvalidation import RepeatedKFold
+from modelvalidation import CVGroupRead
+from modelvalidation import StaticGroupCV
+from modelvalidation import RepeatedStratifiedCV
 
 
 class AIModel(object):
@@ -197,9 +188,9 @@ class AIModel(object):
         i = 0
         while True:
             random.seed(datetime.now().microsecond)
-            startTime = time.time()
+            #startTime = time.time()
             X, y = self.makeDataset(keys, n_rot_repetitions)
-            elapsedTime = time.time() - startTime
+            #elapsedTime = time.time() - startTime
             # print('[VoxelTrainGenerator] {} finished in {} ms'.format(i, int(elapsedTime * 1000)))
             #print("Dataset no. %d\n\n" % (i))
             i += 1
@@ -268,7 +259,7 @@ def run(db,
             if key == tkey:
                 continue
             else:
-                train_keys.extend(cvgroups[key])
+                train_keys.textened(cvgroups[key])
     else:
         sub_target = {}
         for key in ai.target.keys():
@@ -277,7 +268,8 @@ def run(db,
             else:
                 continue
         #train_keys, test_keys = MDCTrainTestSplit(sub_target)
-        train_keys, test_keys = DISCTrainTestSplit(sub_target)
+        #train_keys, test_keys = DISCTrainTestSplit(sub_target)
+        train_keys, test_keys = TrainTestSplit(sub_target)
 
     print("Trainin set size: %d Validation set size %d" % (len(train_keys),
                                                             len(test_keys)))
@@ -410,18 +402,7 @@ def cv(db,
 
     predictions = dict()
     valpredictions = dict()
-    """
-    recalc = dict()
-
     for key in ai.target.keys():
-        # ai.target[key] *= 100
-        predictions[key] = []
-        testpred[key] = []
-        recalc[key] = []
-    else:
-    """
-    for key in ai.target.keys():
-        # ai.target[key] *= 100
         predictions[key] = []
         valpredictions[key] = []
 
@@ -472,14 +453,11 @@ def cv(db,
         # get the 20% of the dataset to build a NN test set
         # ntobj = int(np.ceil(len(sub_target)*0.2))
         # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-        train_keys, vak_keys = DISCTrainTestSplit(sub_target)
-
-        train_generator = ai.VoxelTrainGenerator(train_keys, n_rot_train)
-
+        #train_keys, vak_keys = DISCTrainTestSplit(sub_target)
+        train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.2)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         # print(global_test_intexes)
-
         model = None
         model_ = GetKerasModel()
         if ai.other_descriptors is None:
@@ -529,23 +507,19 @@ def cv(db,
                                                                    ndense_layers,
                                                                    nunits))
         log_dir_ += time.strftime("%Y%m%d%H%M%S")
-
-        callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                  histogram_freq=0,
-                                  write_graph=False,
-                                  write_images=False)]
-        """
+        
+        model_outfile = "%s/%d.h5" % (str(mout_path.absolute()), cv_)
         callbacks_ = [TensorBoard(log_dir=log_dir_,
                                   histogram_freq=0,
                                   write_graph=False,
                                   write_images=False),
-                      EarlyStopping(monitor='val_loss',
-                                    min_delta=1.5,
-                                    patience=20,
-                                    verbose=0,
-                                    mode='auto')]
-        """
+                      ModelCheckpoint(model_outfile
+                                     monitor='val_loss',
+                                      verbose=0,
+                                      save_best_only=True)]
 
+        train_generator = ai.VoxelTrainGenerator(train_keys, n_rot_train)
+        x_train_, y_train_ = ai.VoxelTestSetGenerator(train_keys, n_rot_train)
         x_test_, y_test_ = ai.VoxelTestSetGenerator(test_keys, n_rot_test)
         x_val_, y_val_ = ai.VoxelTestSetGenerator(val_keys, n_rot_test)
         val_generator = ai.VoxelTrainGenerator(val_keys, n_rot_test)
@@ -578,15 +552,15 @@ def cv(db,
         test_scores = model.evaluate(x_test_, y_test_)
         print("Test Scores: {}".format(test_scores))
         """
-        # Predict the test set
+        model = GetLoadModelFnc()(model_outfile)
+        y_recalc = model.predict(x_train_)
         ypred_test = model.predict(x_test_)
-        # exp_pred_plot(y_test_, ypred_test[:,0])
-        print("Test Q2: %.4f" % (r2_score(y_test_, ypred_test)))
-
-        # Predict the validation set
         ypred_val = model.predict(x_val_)
-        # exp_pred_plot(y_val_, ypred[:,0])
-        print("Validation R2: %.4f" % (r2_score(y_val_, ypred_val)))
+        # exp_pred_plot(y_test_, ypred_test[:,0])
+        r2 = RSQ(y_train_, y_recalc)
+        q2 = RSQ(y_test_, ypred_test)
+        vr2 = RSQ(y_val_, ypred_val)
+        print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2, q2,     vr2))
 
         # Store the test prediction result
         k = 0
@@ -651,6 +625,8 @@ def cv(db,
         cv_ += 1
 
     if pout is not None:
+    WriteCrossValidationOutput(cvout, self.target, predictions, None)
+    """
         fo = open(pout, "w")
         for key in predictions.keys():
             fo.write("%s," % (key))
@@ -679,7 +655,7 @@ def cv(db,
             else:
                 fo.write("0.0,0.0,0.0,0\n")
         fo.close()
-
+"""
         if feat_imp is not None:
             fo = open("%s" % (featimp_out), "w")
             for i in range(ai.nfeatures):
