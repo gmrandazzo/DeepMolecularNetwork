@@ -80,7 +80,7 @@ def TrainTestSplit(keys, test_size_=0.20, random_state=None):
     else:
         random.seed(random_state)
     nsel = int(np.ceil(n_objects*test_size_))
-    test_keys = random.select(keys, nsel)
+    test_keys = random.sample(keys, nsel)
     train_keys = []
     for key in keys:
         if key in test_keys:
