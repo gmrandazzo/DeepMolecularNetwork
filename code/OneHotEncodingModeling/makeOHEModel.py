@@ -478,7 +478,7 @@ class NNTrain(object):
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
                                                test_size_=0.20,
-                                               ramdom_state=random_state)
+                                               random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         model = None
@@ -634,7 +634,7 @@ class NNTrain(object):
         for dataset_keys, test_keys in RepeatedKFold(n_splits,
                                                      n_repeats,
                                                      list(self.target.keys()),
-                                                     ramdom_state=random_state):
+                                                     random_state=random_state):
             print("Dataset size: %d Validation  size %d" % (len(dataset_keys),
                                                             len(test_keys)))
 
@@ -646,7 +646,7 @@ class NNTrain(object):
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
                                                   test_size_=0.20,
-                                                  ramdom_state=random_state+cv_)
+                                                  random_state=random_state+cv_)
 
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
             x_val, y_val, rval_keys = self.GenData(val_keys)
@@ -935,7 +935,7 @@ class NNTrain(object):
 
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
                                                test_size_=0.20,
-                                               ramdom_state=random_state)
+                                               random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
