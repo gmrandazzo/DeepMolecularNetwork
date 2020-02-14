@@ -603,6 +603,7 @@ class NNTrain(object):
               steps_per_epochs_,
               nfilters,
               nunits,
+              random_state,
               cvout,
               n_splits=5,
               n_repeats=10,
@@ -1210,13 +1211,16 @@ def main():
                          args.epochs,
                          args.steps_per_epochs,
                          args.nfilters,
-                         args.nunits)
+                         args.nunits,
+                         args.random_state,
+                         args.mout)
         else:
             nn.runcv(args.batch_size,
                      args.epochs,
                      args.steps_per_epochs,
                      args.nfilters,
                      args.nunits,
+                     args.random_state,
                      args.cvout,
                      args.n_splits,
                      args.n_repeats,
