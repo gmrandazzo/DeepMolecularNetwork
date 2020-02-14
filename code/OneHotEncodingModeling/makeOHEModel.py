@@ -6,8 +6,6 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 import argparse
 from pathlib import Path
@@ -474,10 +472,13 @@ class NNTrain(object):
                   steps_per_epochs_,
                   nfilters,
                   nunits,
+                  random_state,
                   mout=None):
         print("N. instances: %d" % (len(self.target)))
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
-        train_keys, test_keys = TrainTestSplit(self.target, test_size_=0.20)
+        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
+                                               test_size_=0.20,
+                                               random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         model = None
@@ -631,7 +632,8 @@ class NNTrain(object):
 
         for dataset_keys, test_keys in RepeatedKFold(n_splits,
                                                      n_repeats,
-                                                     self.target):
+                                                     list(self.target.keys()),
+                                                     random_state):
             print("Dataset size: %d Validation  size %d" % (len(dataset_keys),
                                                             len(test_keys)))
 
@@ -641,7 +643,9 @@ class NNTrain(object):
 
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-            train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.20)
+            train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
+                                                  test_size_=0.20,
+                                                  random_state+cv_)
 
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
             x_val, y_val, rval_keys = self.GenData(val_keys)
@@ -925,9 +929,12 @@ class NNTrain(object):
                    batch_size_,
                    steps_per_epochs_,
                    num_epochs,
+                   random_state,
                    gmout="GridSearchResult"):
 
-        train_keys, test_keys = TrainTestSplit(self.target, test_size_=0.20)
+        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
+                                               test_size_=0.20,
+                                               random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -1141,6 +1148,8 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--batch_size', default=100, type=int,
                         help='Batch size')
+    parser.add_argument('--random_state', default=123458976, type=int,
+                        help='Random state')
     parser.add_argument('--steps_per_epochs', default=200, type=int,
                         help='Steps per epochs')
     parser.add_argument('--n_splits', default=5, type=int,

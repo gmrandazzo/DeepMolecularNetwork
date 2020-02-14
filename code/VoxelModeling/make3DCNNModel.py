@@ -33,6 +33,7 @@ from modelhelpers import GetLoadModelFnc
 
 from dmnnio import ReadDescriptors
 from dmnnio import ReadTarget
+from dmnnio import WriteCrossValidationOutput
 from modelvalidation import RepeatedKFold
 from modelvalidation import CVGroupRead
 from modelvalidation import StaticGroupCV
@@ -224,20 +225,21 @@ class AIModel(object):
         return batch_perm
 
 
-def run(db,
-        csv_target,
-        csv_descriptors,
-        num_epochs,
-        n_rot_train,
-        train_steps_per_epoch_,
-        n_rotation_test,
-        test_steps_per_epoch_,
-        ndense_layers,
-        nunits,
-        nfilters,
-        outmodel,
-        fcvgroup=None,
-        tid=None):
+def simplerun(db,
+              csv_target,
+              csv_descriptors,
+              num_epochs,
+              n_rot_train,
+              train_steps_per_epoch_,
+              n_rotation_test,
+              test_steps_per_epoch_,
+              ndense_layers,
+              nunits,
+              nfilters,
+              random_state,
+              outmodel=None,
+              fcvgroup=None,
+              tid=None):
     # Load the dataset
     ai = AIModel(csv_target, db, csv_descriptors)
 
@@ -269,7 +271,9 @@ def run(db,
                 continue
         #train_keys, test_keys = MDCTrainTestSplit(sub_target)
         #train_keys, test_keys = DISCTrainTestSplit(sub_target)
-        train_keys, test_keys = TrainTestSplit(sub_target)
+        train_keys, test_keys = TrainTestSplit(list(sub_target.keys()),
+                                               test_size_=0.2,
+                                               random_state)
 
     print("Trainin set size: %d Validation set size %d" % (len(train_keys),
                                                             len(test_keys)))
@@ -390,7 +394,8 @@ def cv(db,
        ndense_layers,
        nunits,
        nfilters,
-       pout,
+       random_state,
+       cvout=None,
        fcvgroup=None,
        featimp_out=None,
        y_recalc=False,
@@ -398,8 +403,6 @@ def cv(db,
     # Load the dataset
     ai = AIModel(csv_target, db, csv_descriptors)
     print("N. instances: %d" % (len(ai.target)))
-    cv_ = 0
-
     predictions = dict()
     valpredictions = dict()
     for key in ai.target.keys():
@@ -439,8 +442,11 @@ def cv(db,
         cvmethod = StaticGroupCV(cvgroups)
         # cvmethod = RepeatedStratifiedCV(cvgroups, n_repeats_, 2)
     else:
-        cvmethod = RepeatedKFold(n_splits_, n_repeats_, ai.target)
-
+        cvmethod = RepeatedKFold(n_splits_,
+                                 n_repeats_,
+                                 list(ai.target,keys()),
+                                 random_state)
+    cv_ = 0
     for dataset_keys, test_keys in cvmethod:
         print("Dataset set size: %d Test set size %d" % (len(dataset_keys),
                                                          len(test_keys)))
@@ -454,7 +460,9 @@ def cv(db,
         # ntobj = int(np.ceil(len(sub_target)*0.2))
         # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
         #train_keys, vak_keys = DISCTrainTestSplit(sub_target)
-        train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.2)
+        train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
+                                              test_size_=0.2,
+                                              random_state+cv_)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         # print(global_test_intexes)
@@ -513,8 +521,8 @@ def cv(db,
                                   histogram_freq=0,
                                   write_graph=False,
                                   write_images=False),
-                      ModelCheckpoint(model_outfile
-                                     monitor='val_loss',
+                      ModelCheckpoint(model_outfile,
+                                      monitor='val_loss',
                                       verbose=0,
                                       save_best_only=True)]
 
@@ -624,87 +632,57 @@ def cv(db,
         # Update the cross validation id
         cv_ += 1
 
-    if pout is not None:
-    WriteCrossValidationOutput(cvout, self.target, predictions, None)
-    """
-        fo = open(pout, "w")
-        for key in predictions.keys():
-            fo.write("%s," % (key))
-            if len(predictions[key]) > 0:
-                freq = len(predictions[key])
-                ypavg = np.mean(predictions[key])
-                ystdev = np.std(predictions[key])
-                res = ai.target[key] - ypavg
-                fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (ai.target[key],
-                                                      ypavg,
-                                                      ystdev,
-                                                      res,
-                                                      freq))
-            else:
-                fo.write("%.4f,0.0,0.0,0.0," % (ai.target[key]))
-
-            if len(valpredictions[key]) > 0:
-                freq_r = len(valpredictions[key])
-                ypavg_r = np.mean(valpredictions[key])
-                ystdev_r = np.std(valpredictions[key])
-                res_r = ai.target[key] - ypavg_r
-                fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
-                                                  ystdev_r,
-                                                  res_r,
-                                                  freq_r))
-            else:
-                fo.write("0.0,0.0,0.0,0\n")
-        fo.close()
-"""
-        if feat_imp is not None:
-            fo = open("%s" % (featimp_out), "w")
-            for i in range(ai.nfeatures):
-                """
-                fo.write("%s," % (ai.header[i]))
-                for j in range(len(feat_imp[i])-1):
-                    fo.write("%.4f," % (feat_imp[i][j]))
-                fo.write("%.4f\n" % (feat_imp[i][-1]))
-                """
-                a = np.array(feat_imp[i])
-                min_a = a.min()
-                q1 = np.percentile(a, 25)
-                med_a = np.percentile(a, 50)
-                q3 = np.percentile(a, 75)
-                max_a = a.max()
-                fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % (ai.header[i],
-                                                            min_a,
-                                                            q1,
-                                                            med_a,
-                                                            q3,
-                                                            max_a))
-            a = np.array(feat_imp[-1])
+    if cvout is not None:
+        WriteCrossValidationOutput(cvout, self.target, predictions, None)
+    
+    if feat_imp is not None:
+        fo = open("%s" % (featimp_out), "w")
+        for i in range(ai.nfeatures):
+            """
+            fo.write("%s," % (ai.header[i]))
+            for j in range(len(feat_imp[i])-1):
+                fo.write("%.4f," % (feat_imp[i][j]))
+            fo.write("%.4f\n" % (feat_imp[i][-1]))
+            """
+            a = np.array(feat_imp[i])
             min_a = a.min()
             q1 = np.percentile(a, 25)
             med_a = np.percentile(a, 50)
             q3 = np.percentile(a, 75)
             max_a = a.max()
-            fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % ("qm_voxel_charge",
+            fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % (ai.header[i],
                                                         min_a,
                                                         q1,
                                                         med_a,
                                                         q3,
                                                         max_a))
-            """
-            fo.write("%s,\n" % ("qm_voxel_charge"))
-            for j in range(len(feat_imp[-1])-1):
-                fo.write("%.4f," % (feat_imp[-1][j]))
-            fo.write("%.4f\n" % (feat_imp[-1][-1]))
-            """
-            fo.close()
-
-    else:
-        ycvp = {}
-        for key in predictions.keys():
-            if len(predictions[key]) > 0:
-                ycvp[key] = np.mean(predictions[key])
-            else:
-                continue
-        return ycvp
+        a = np.array(feat_imp[-1])
+        min_a = a.min()
+        q1 = np.percentile(a, 25)
+        med_a = np.percentile(a, 50)
+        q3 = np.percentile(a, 75)
+        max_a = a.max()
+        fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % ("qm_voxel_charge",
+                                                    min_a,
+                                                    q1,
+                                                    med_a,
+                                                    q3,
+                                                    max_a))
+        """
+        fo.write("%s,\n" % ("qm_voxel_charge"))
+        for j in range(len(feat_imp[-1])-1):
+            fo.write("%.4f," % (feat_imp[-1][j]))
+        fo.write("%.4f\n" % (feat_imp[-1][-1]))
+        """
+        fo.close()
+    
+    ycvp = {}
+    for key in predictions.keys():
+        if len(predictions[key]) > 0:
+            ycvp[key] = np.mean(predictions[key])
+        else:
+            continue
+    return ycvp
 
 
 def main():
@@ -735,6 +713,10 @@ def main():
                    help='model output')
     p.add_argument('--epochs',
                    default=100,
+                   type=int,
+                   help='Number of epochs')
+    p.add_argument('--random_state',
+                   default=123458976,
                    type=int,
                    help='Number of epochs')
     p.add_argument('--n_rot_train',
@@ -825,6 +807,7 @@ def main():
                args.nlayers,
                args.nunits,
                args.nfilters,
+               args.random_state,
                args.cvout,
                args.cvgroupfile,
                args.featimp_out,
@@ -844,20 +827,21 @@ def main():
                args.cvout)
             """
         else:
-            run(args.db,
-                args.target_csv,
-                args.desc_csv,
-                args.epochs,
-                args.n_rot_train,
-                args.train_steps_per_epoch,
-                args.n_rot_validation,
-                args.val_steps_per_epoch,
-                args.nlayers,
-                args.nunits,
-                args.nfilters,
-                args.mout,
-                args.cvgroupfile,
-                args.tid)
+            simplerun(args.db,
+                      args.target_csv,
+                      args.desc_csv,
+                      args.epochs,
+                      args.n_rot_train,
+                      args.train_steps_per_epoch,
+                      args.n_rot_validation,
+                      args.val_steps_per_epoch,
+                      args.nlayers,
+                      args.nunits,
+                      args.nfilters,
+                      args.random_state,
+                      args.mout,
+                      args.cvgroupfile,
+                      args.tid)
     return 0
 
 

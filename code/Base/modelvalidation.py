@@ -16,84 +16,6 @@ import multiprocessing
 from math import ceil
 
 
-def get_random_int(from_, to_, selected_ids):
-    """
-    Get random int avoiding repetitions.
-    If all index were selected return -1
-    """
-    loop = 0
-    while True:
-        indx = random.randint(from_, to_-1)
-        if indx in selected_ids:
-            if loop > 10:
-                return -1
-            else:
-                loop += 1
-        else:
-            selected_ids.append(indx)
-            return indx
-
-
-def TrainTestKeyWorker(var_lst):
-    i_from, i_to, lst, keys = var_lst
-    train_keys = []
-    test_keys = []
-    for i in range(i_from, i_to):
-        if i in lst:
-           test_keys.append(keys[i])
-        else:
-            train_keys.append(keys[i])
-    return train_keys, test_keys
-
-
-def TrainTestSplit(dict_target, test_size_=0.20, randomize=False):
-    """
-    Split dataset in training set and test set accounting
-    """
-    keys = list(dict_target.keys())
-    n_objects = len(keys)
-    random_state = 1
-    if randomize is True:
-        random_state = datetime.now().microsecond
-    else:
-        random_state = n_objects
-    random.seed(random_state)
-    nsel = int(np.ceil(n_objects*test_size_))
-    test_index = []
-    selected_index = []
-    for i in range(nsel):
-        test_index.append(get_random_int(0, n_objects-1, selected_index))
-        # test_index.append(random.randint(0, n_objects-1))
-
-    runlst = []
-    nths = multiprocessing.cpu_count()
-    di = ceil(n_objects/nths)
-
-    prev = 0
-    for i in range(di, n_objects, di):
-        runlst.append([prev, i, test_index, keys])
-        prev = i
-    runlst.append([prev, n_objects, test_index, keys])
-
-    pool = multiprocessing.Pool(nths)
-    results = pool.map(TrainTestKeyWorker, runlst)
-
-    train_keys = []
-    test_keys = []
-    for res in results:
-        train_keys.extend(res[0])
-        test_keys.extend(res[1])
-
-    """
-    for i in range(n_objects):
-        if i in test_index:
-            test_keys.append(keys[i])
-        else:
-            train_keys.append(keys[i])
-    """
-    return train_keys, test_keys
-
-
 def MDCTrainTestSplit(dict_target, n_objects=0):
     """
     Most descriptive compound train/test
@@ -147,14 +69,35 @@ def DISCTrainTestSplit(dict_target, n_objects=0):
     return train_keys, test_keys
 
 
-def RepeatedKFold(n_splits, n_repeats, dict_target, seed_val=None):
+
+def TrainTestSplit(keys, test_size_=0.20, random_state=None):
+    """
+    Split dataset in training set and test set accounting
+    """
+    n_objects = len(keys)
+    if random_state is None:
+        random.seed(datetime.now().microsecond)
+    else:
+        random.seed(random_state)
+    nsel = int(np.ceil(n_objects*test_size_))
+    test_keys = random.select(keys, nsel)
+    train_keys = []
+    for key in keys:
+        if key in test_keys:
+            continue
+        else:
+            train_keys.append(key)
+    return train_keys, test_keys
+
+
+def RepeatedKFold_(n_splits, n_repeats, dict_target, random_state=None):
     """
     Repeated K-fold cross validation method starting from a dictionary target
     """
-    if seed_val is None:
+    if random_state is None:
         random.seed(datetime.now().microsecond)
     else:
-        random.seed(seed_val)
+        random.seed(random_state)
     keys = list(dict_target.keys())
     indexes = [i for i in range(len(keys))]
     maxgobj = int(ceil(len(keys)/float(n_splits)))
@@ -183,12 +126,21 @@ def RepeatedKFold(n_splits, n_repeats, dict_target, seed_val=None):
             yield (train_keys, test_keys)
 
 
-def KFold(n_splits, dict_target, seed_val=None):
-    if seed_val is None:
+def RepeatedKFold(n_splits, n_repeats, keys, random_state=None):
+    """
+    Repeated K-fold cross validation method starting from a dictionary target
+    """
+    for r in range(n_repeats):
+        if random_state is not None:
+            yield KFold(n_splits, keys, random_state+r)
+        else:
+            yield KFold(n_splits, keys, None)
+
+def KFold(n_splits, keys, random_state=None):
+    if random_state is None:
         random.seed(datetime.now().microsecond)
     else:
-        random.seed(seed_val)
-    keys = list(dict_target.keys())
+        random.seed(random_state)
     indexes = [i for i in range(len(keys))]
     random.shuffle(indexes)
     appgroup = []
@@ -212,7 +164,7 @@ def KFold(n_splits, dict_target, seed_val=None):
                 test_keys.append(keys[indexes[k]])
             else:
                 train_keys.append(keys[indexes[k]])
-        yield (train_keys, test_keys)
+        yield train_keys, test_keys
 
 
 def CVGroupRead(fcvgroup):

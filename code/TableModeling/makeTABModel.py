@@ -240,13 +240,16 @@ class NNTrain(object):
     def GridSearch(self,
                    batch_size_,
                    num_epochs,
+                   random_state,
                    gmout="GridSearchResult"):
         """
         Run GridSearch to find best parameters.
         """
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
-        train_keys, test_keys = TrainTestSplit(self.target, test_size_=0.20)
+        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
+                                               test_size_=0.20,
+                                               random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -443,13 +446,16 @@ class NNTrain(object):
                   num_epochs,
                   ndense_layers,
                   nunits,
+                  random_state,
                   model_output=None):
         """
         Run a simple model...
         """
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
-        train_keys, test_keys = TrainTestSplit(self.target, test_size_=0.20)
+        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
+                                               test_size_=0.20,
+                                               random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -544,6 +550,7 @@ class NNTrain(object):
               cvout,
               n_splits=5,
               n_repeats=10,
+              random_state=None
               mout=None,
               fimpfile=None):
         print("N. instances: %d" % (len(self.target)))
@@ -573,7 +580,8 @@ class NNTrain(object):
 
         for dataset_keys, test_keys in RepeatedKFold(n_splits,
                                                      n_repeats,
-                                                     self.target):
+                                                     list(self.target.keys()),
+                                                     random_state):
             print("Dataset size: %d Test  size %d" % (len(dataset_keys),
                                                       len(test_keys)))
 
@@ -583,7 +591,9 @@ class NNTrain(object):
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             # train_keys, test_keys = DISCTrainTestSplit(sub_target)
-            train_keys, val_keys = TrainTestSplit(sub_target, test_size_=0.20)
+            train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
+                                                  test_size_=0.20,
+                                                  random_state+cv_)
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
             # x_train, y_train = self.GenData(train_keys)
@@ -688,6 +698,8 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--batch_size', default=None, type=int,
                         help='Batch size')
+    parser.add_argument('--random_state', default=123458976, type=int,
+                        help='Random state')
     parser.add_argument('--gsout', default=None, type=str,
                         help='Grid Search output')
     parser.add_argument('--n_splits', default=5, type=int,
@@ -711,9 +723,8 @@ def main():
         print("\n Usage: %s --xmatrix [input file] --ytarget [input file] --epochs [int] --batch_size [int]" % (argv[0]))
     else:
         # fix random seed for reproducibility
-        seed = 981723
-        np.random.seed(seed)
-        random.seed(seed)
+        np.random.seed(args.random_state)
+        random.seed(args.random_state)
         X_raw, nfeatures_, xheader = ReadDescriptors(args.xmatrix)
         target = ReadTarget(args.ytarget)
         nn = NNTrain(X_raw, target, xheader)
@@ -723,6 +734,7 @@ def main():
                          args.epochs,
                          args.ndense_layers,
                          args.nunits,
+                         args.random_state,
                          args.mout)
         elif args.cvout is not None and args.gsout is None:
             nn.runcv(args.batch_size,
@@ -732,6 +744,7 @@ def main():
                      args.cvout,
                      args.n_splits,
                      args.n_repeats,
+                     args.random_state,
                      args.mout,
                      args.featimp)
         else:

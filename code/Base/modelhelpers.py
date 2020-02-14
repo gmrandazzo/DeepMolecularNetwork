@@ -10,6 +10,21 @@ import sys
 from pathlib import Path
 from keras.models import load_model
 
+def GetValidationFnc():
+    """
+    Get custom model from model.py file
+    
+    """
+    p = Path('.')
+    sys.path.append("%s" % (str(p.absolute())))
+    try:
+        from model import validation
+        return validation
+    except ImportError:
+        print("Please create a model.py file in your directory")
+        print("with a validation function which take as input a list of names.")
+        return None
+
 def GetKerasModel():
     """
     Get custom model from model.py file
