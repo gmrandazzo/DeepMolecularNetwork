@@ -6,8 +6,7 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 import os
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 
 from keras import backend as K
 # Some memory clean-up
@@ -249,7 +248,7 @@ class NNTrain(object):
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
                                                test_size_=0.20,
-                                               random_state)
+                                               random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -455,7 +454,7 @@ class NNTrain(object):
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
                                                test_size_=0.20,
-                                               random_state)
+                                               random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -550,7 +549,7 @@ class NNTrain(object):
               cvout,
               n_splits=5,
               n_repeats=10,
-              random_state=None
+              random_state=None,
               mout=None,
               fimpfile=None):
         print("N. instances: %d" % (len(self.target)))
@@ -581,7 +580,7 @@ class NNTrain(object):
         for dataset_keys, test_keys in RepeatedKFold(n_splits,
                                                      n_repeats,
                                                      list(self.target.keys()),
-                                                     random_state):
+                                                     random_state=random_state):
             print("Dataset size: %d Test  size %d" % (len(dataset_keys),
                                                       len(test_keys)))
 
@@ -593,7 +592,7 @@ class NNTrain(object):
             # train_keys, test_keys = DISCTrainTestSplit(sub_target)
             train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
                                                   test_size_=0.20,
-                                                  random_state+cv_)
+                                                  random_state=random_state+cv_)
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
             # x_train, y_train = self.GenData(train_keys)
