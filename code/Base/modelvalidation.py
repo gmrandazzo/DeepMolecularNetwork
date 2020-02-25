@@ -69,17 +69,18 @@ def DISCTrainTestSplit(dict_target, n_objects=0):
     return train_keys, test_keys
 
 
-
-def TrainTestSplit(keys, test_size_=0.20, random_state=None):
+def TrainTestSplit(keys_, test_size=0.20, random_state=None):
     """
     Split dataset in training set and test set accounting
     """
+    keys = list(keys_)
+    keys.sort()
     n_objects = len(keys)
     if random_state is None:
         random.seed(datetime.now().microsecond)
     else:
         random.seed(random_state)
-    nsel = int(np.ceil(n_objects*test_size_))
+    nsel = int(np.ceil(n_objects*test_size))
     test_keys = random.sample(keys, nsel)
     train_keys = []
     for key in keys:
@@ -90,53 +91,23 @@ def TrainTestSplit(keys, test_size_=0.20, random_state=None):
     return train_keys, test_keys
 
 
-def RepeatedKFold_(n_splits, n_repeats, dict_target, random_state=None):
-    """
-    Repeated K-fold cross validation method starting from a dictionary target
-    """
-    if random_state is None:
-        random.seed(datetime.now().microsecond)
-    else:
-        random.seed(random_state)
-    keys = list(dict_target.keys())
-    indexes = [i for i in range(len(keys))]
-    maxgobj = int(ceil(len(keys)/float(n_splits)))
-    for r in range(n_repeats):
-        random.shuffle(indexes)
-        appgroup = []
-        n = 0
-        g = 0
-        for i in range(len(keys)):
-            if n == maxgobj:
-                n = 0
-                g += 1
-                appgroup.append(g)
-            else:
-                appgroup.append(g)
-                n += 1
-
-        for g in range(n_splits):
-            train_keys = []
-            test_keys = []
-            for k in range(len(keys)):
-                if appgroup[k] == g:
-                    test_keys.append(keys[indexes[k]])
-                else:
-                    train_keys.append(keys[indexes[k]])
-            yield (train_keys, test_keys)
-
-
-def RepeatedKFold(n_splits, n_repeats, keys, random_state=None):
+def RepeatedKFold(keys, n_splits=5, n_repeats=20, random_state=None):
     """
     Repeated K-fold cross validation method starting from a dictionary target
     """
     for r in range(n_repeats):
         if random_state is not None:
-            yield KFold(n_splits, keys, random_state+r)
+            for train, test in KFold(keys,
+                                     n_splits,
+                                     random_state+r):
+                yield train, test
         else:
-            yield KFold(n_splits, keys, None)
+            for train, test in KFold(keys,
+                                     n_splits,
+                                     None):
+                yield train, test
 
-def KFold(n_splits, keys, random_state=None):
+def KFold(keys, n_splits, random_state=None):
     if random_state is None:
         random.seed(datetime.now().microsecond)
     else:
@@ -165,7 +136,6 @@ def KFold(n_splits, keys, random_state=None):
             else:
                 train_keys.append(keys[indexes[k]])
         yield train_keys, test_keys
-
 
 def CVGroupRead(fcvgroup):
     d = {}

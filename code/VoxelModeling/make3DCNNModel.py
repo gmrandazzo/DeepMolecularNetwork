@@ -7,9 +7,6 @@
 # See the file LICENSE for details
 
 from keras import backend as K
-# Some memory clean-up
-K.clear_session()
-
 import argparse
 from model_builder import *
 from keras.callbacks import TensorBoard
@@ -272,7 +269,7 @@ def simplerun(db,
         #train_keys, test_keys = MDCTrainTestSplit(sub_target)
         #train_keys, test_keys = DISCTrainTestSplit(sub_target)
         train_keys, test_keys = TrainTestSplit(list(sub_target.keys()),
-                                               test_size_=0.2,
+                                               test_size=0.2,
                                                random_state)
 
     print("Trainin set size: %d Validation set size %d" % (len(train_keys),
@@ -360,7 +357,8 @@ def simplerun(db,
                         validation_data=test_generator,
                         validation_steps=test_steps_per_epoch_,
                         # nb_val_samples=x_test.shape[0],
-                        callbacks=callbacks_)
+                        callbacks=callbacks_,
+                        use_multiprocessing=True)
 
     x_test_, y_test_ = ai.VoxelTestSetGenerator(test_keys, n_rotation_test)
     y_pred_ = model.predict(x_test_)
@@ -442,9 +440,9 @@ def cv(db,
         cvmethod = StaticGroupCV(cvgroups)
         # cvmethod = RepeatedStratifiedCV(cvgroups, n_repeats_, 2)
     else:
-        cvmethod = RepeatedKFold(n_splits_,
+        cvmethod = RepeatedKFold(list(ai.target,keys()),
+                                 n_splits_,
                                  n_repeats_,
-                                 list(ai.target,keys()),
                                  random_state)
     cv_ = 0
     for dataset_keys, test_keys in cvmethod:
@@ -452,19 +450,18 @@ def cv(db,
                                                          len(test_keys)))
         train_keys = None
         val_keys = None
-
-        sub_target = {}
-        for key in dataset_keys:
-            sub_target[key] = ai.target[key]
+        
+        # Some memory clean-up
+        K.clear_session()
         # get the 20% of the dataset to build a NN test set
         # ntobj = int(np.ceil(len(sub_target)*0.2))
         # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
         #train_keys, vak_keys = DISCTrainTestSplit(sub_target)
-        train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
-                                              test_size_=0.2,
+        train_keys, val_keys = TrainTestSplit(dataset_keys,
+                                              test_size=0.2,
                                               random_state+cv_)
-        print("Train set size: %d Test set size %d" % (len(train_keys),
-                                                       len(test_keys)))
+        print("Train set size: %d Validation set size %d" % (len(train_keys),
+                                                             len(val_keys)))
         # print(global_test_intexes)
         model = None
         model_ = GetKerasModel()
@@ -538,7 +535,8 @@ def cv(db,
                             # validation_data=(x_test_, y_test_),
                             validation_data=val_generator,
                             validation_steps=test_steps_per_epoch_,
-                            callbacks=callbacks_)
+                            callbacks=callbacks_,
+                            use_multiprocessing=True)
         """
         if y_recalc is True:
             # Recalculate y it takes a lot of time

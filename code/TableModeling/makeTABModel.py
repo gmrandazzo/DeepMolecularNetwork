@@ -247,7 +247,7 @@ class NNTrain(object):
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size_=0.20,
+                                               test_size=0.20,
                                                random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
@@ -453,7 +453,7 @@ class NNTrain(object):
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size_=0.20,
+                                               test_size=0.20,
                                                random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
@@ -564,6 +564,15 @@ class NNTrain(object):
             for dname in self.xheader:
                 f.write("%s\n" % (dname))
             f.close()
+        else:
+            # Utilised to store the out path
+            mout_path = Path("%s_model" % (time.strftime("%Y%m%d%H%M%S")))
+            mout_path.mkdir()
+            # Save the descriptor order
+            f = open("%s/odesc_header.csv" % (str(mout_path.absolute())), "w")
+            for dname in self.xheader:
+                f.write("%s\n" % (dname))
+            f.close()
 
         feat_imp = {}
         if fimpfile is not None:
@@ -576,22 +585,21 @@ class NNTrain(object):
         for key in self.target.keys():
             predictions[key] = []
             recalc[key] = []
-
-        for dataset_keys, test_keys in RepeatedKFold(n_splits,
+        for dataset_keys, test_keys in RepeatedKFold(list(self.target.keys()),
+                                                     n_splits,
                                                      n_repeats,
-                                                     list(self.target.keys()),
                                                      random_state=random_state):
+        
             print("Dataset size: %d Test  size %d" % (len(dataset_keys),
                                                       len(test_keys)))
-
-            sub_target = {}
-            for key in dataset_keys:
-                sub_target[key] = self.target[key]
+            # Some memory clean-up
+            K.clear_session()
+            
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
             # train_keys, test_keys = DISCTrainTestSplit(sub_target)
-            train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
-                                                  test_size_=0.20,
+            train_keys, val_keys = TrainTestSplit(dataset_keys,
+                                                  test_size=0.20,
                                                   random_state=random_state+cv_)
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
@@ -736,6 +744,7 @@ def main():
                          args.random_state,
                          args.mout)
         elif args.cvout is not None and args.gsout is None:
+            nn.verbose = 1
             nn.runcv(args.batch_size,
                      args.epochs,
                      args.ndense_layers,

@@ -41,8 +41,6 @@ from sys import argv
 import time
 import numpy as np
 from keras import backend as K
-# Some memory clean-up
-K.clear_session()
 
 
 from OHEDatabase import OHEDatabase
@@ -469,7 +467,7 @@ class NNTrain(object):
     def simplerun(self,
                   batch_size_,
                   num_epochs,
-                  steps_per_epochs_,
+                  steps_per_epoch_,
                   nfilters,
                   nunits,
                   random_state,
@@ -477,7 +475,7 @@ class NNTrain(object):
         print("N. instances: %d" % (len(self.target)))
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size_=0.20,
+                                               test_size=0.20,
                                                random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
@@ -543,17 +541,17 @@ class NNTrain(object):
                                     verbose=0,
                                     mode='auto')]
         """
-
         #train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
         train_generator = self.DataGenerator(train_keys, batch_size_)
         model.fit_generator(train_generator,
-                            steps_per_epoch=steps_per_epochs_,
+                            steps_per_epoch=steps_per_epoch_,
                             epochs=num_epochs,
                             verbose=1,
                             validation_data=(x_test, y_test),
                             # validation_data=test_generator,
                             # validation_steps=test_steps_per_epoch,
-                            callbacks=callbacks_)
+                            callbacks=callbacks_,
+                            use_multiprocessing=True)
         """
         model.fit(x_train, y_train,
                   epochs=num_epochs,
@@ -600,7 +598,7 @@ class NNTrain(object):
     def runcv(self,
               batch_size_,
               num_epochs,
-              steps_per_epochs_,
+              steps_per_epoch_,
               nfilters,
               nunits,
               random_state,
@@ -631,21 +629,16 @@ class NNTrain(object):
             predictions[key] = []
             recalc[key] = []
 
-        for dataset_keys, test_keys in RepeatedKFold(n_splits,
+        for dataset_keys, test_keys in RepeatedKFold(list(self.target.keys()),
+                                                     n_splits,
                                                      n_repeats,
-                                                     list(self.target.keys()),
                                                      random_state=random_state):
-            print("Dataset size: %d Validation  size %d" % (len(dataset_keys),
-                                                            len(test_keys)))
-
-            sub_target = {}
-            for key in dataset_keys:
-                sub_target[key] = self.target[key]
-
+            print("Dataset size: %d Testset size %d" % (len(dataset_keys),
+                                                        len(test_keys)))
             # ntobj = int(np.ceil(len(sub_target)*0.1))
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-            train_keys, val_keys = TrainTestSplit(list(sub_target.keys()),
-                                                  test_size_=0.20,
+            train_keys, val_keys = TrainTestSplit(dataset_keys,
+                                                  test_size=0.20,
                                                   random_state=random_state+cv_)
 
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
@@ -655,6 +648,8 @@ class NNTrain(object):
             print("Train set size: %d Validation set size %d" % (len(train_keys),
                                                                  len(val_keys)))
 
+            # Some memory clean-up
+            K.clear_session()
             model = None
             model_ = GetKerasModel()
             if self.dx is not None:
@@ -716,18 +711,19 @@ class NNTrain(object):
 
             train_generator = self.DataGenerator(train_keys, batch_size_)
             model.fit_generator(train_generator,
-                                steps_per_epoch=steps_per_epochs_,
+                                steps_per_epoch=steps_per_epoch_,
                                 epochs=num_epochs,
                                 verbose=1,
                                 validation_data=(x_val, y_val),
                                 # validation_data=test_generator,
                                 # validation_steps=test_steps_per_epoch,
-                                callbacks=callbacks_)
+                                callbacks=callbacks_,
+                                use_multiprocessing=True)
             """
             model.fit(x_train, y_train,
                       epochs=num_epochs,
                       batch_size=b,
-                      steps_per_epochs=steps_per_epochs_,
+                      steps_per_epoch=steps_per_epoch_,
                       verbose=1,
                       validation_data=(x_val, y_val),
                       callbacks=callbacks_)
@@ -866,7 +862,7 @@ class NNTrain(object):
             print("Validating %s" % (val_key))
 
             # train_keys, test_keys = MDCTrainTestSplit(sub_target, 0)
-            train_keys, test_keys = TrainTestSplit(sub_target, test_size_=0.20)
+            train_keys, test_keys = TrainTestSplit(sub_target, test_size=0.20)
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
             x_test, y_test, rtest_keys = self.GenData(test_keys)
 
@@ -928,13 +924,13 @@ class NNTrain(object):
 
     def GridSearch(self,
                    batch_size_,
-                   steps_per_epochs_,
+                   steps_per_epoch_,
                    num_epochs,
                    random_state,
                    gmout="GridSearchResult"):
 
         train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size_=0.20,
+                                               test_size=0.20,
                                                random_state=random_state)
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
@@ -1067,7 +1063,7 @@ class NNTrain(object):
                 model.fit(x_train, y_train,
                           epochs=num_epochs,
                           batch_size=b,
-                          steps_per_epochs=steps_per_epochs_,
+                          steps_per_epoch=steps_per_epoch_,
                           verbose=self.verbose,
                           validation_data=(x_test, y_test),
                           callbacks=callbacks_)
@@ -1151,7 +1147,7 @@ def main():
                         help='Batch size')
     parser.add_argument('--random_state', default=123458976, type=int,
                         help='Random state')
-    parser.add_argument('--steps_per_epochs', default=200, type=int,
+    parser.add_argument('--steps_per_epoch', default=20, type=int,
                         help='Steps per epochs')
     parser.add_argument('--n_splits', default=5, type=int,
                         help='Number of kfold splits')
@@ -1209,7 +1205,7 @@ def main():
             nn.verbose = 1
             nn.simplerun(args.batch_size,
                          args.epochs,
-                         args.steps_per_epochs,
+                         args.steps_per_epoch,
                          args.nfilters,
                          args.nunits,
                          args.random_state,
@@ -1217,7 +1213,7 @@ def main():
         else:
             nn.runcv(args.batch_size,
                      args.epochs,
-                     args.steps_per_epochs,
+                     args.steps_per_epoch,
                      args.nfilters,
                      args.nunits,
                      args.random_state,
