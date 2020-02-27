@@ -318,14 +318,14 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        smiohes = self.db.X[key_]
+                        smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.db.X[key_][k]
+                            smiohe = smiohes[k]
                         else:
-                            smiohe = self.db.X[key_][0]
+                            smiohe = smiohes[0]
                         bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
@@ -345,14 +345,14 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        smiohes = self.db.X[key_]
+                        smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.db.X[key_][k]
+                            smiohe = smiohes[k]
                         else:
-                            smiohe = self.db.X[key_][0]
+                            smiohe = smiohes[0]
                         bfeat = smiohe
                         cfeat = self.dx[key_]
                         batch_y.append(tval)
@@ -373,14 +373,14 @@ class NNTrain(object):
                     for i in range(size_tkeys):
                         key_ = keylst[i]
                         tval = self.target[key_]
-                        smiohes = self.db.X[key_]
+                        smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.db.X[key_][k]
+                            smiohe = smiohes[k]
                         else:
-                            smiohe = self.db.X[key_][0]
+                            smiohe = smiohes[0]
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
@@ -394,14 +394,14 @@ class NNTrain(object):
                         indx = random.randint(0, size_tkeys-1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
-                        smiohes = self.db.X[key_]
+                        smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
                             k = random.randint(0, smiohes_size-1)
-                            smiohe = self.db.X[key_][k]
+                            smiohe = smiohes[k]
                         else:
-                            smiohe = self.db.X[key_][0]
+                            smiohe = smiohes[0]
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
@@ -418,7 +418,7 @@ class NNTrain(object):
                     tval = self.target[key]
                     cfeat = self.dx[key]
                     batch_y.append(tval)
-                    smiohes = self.db.X[key]
+                    smiohes = self.db.X[key].getData()
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:
@@ -441,7 +441,7 @@ class NNTrain(object):
             for key in keys:
                 try:
                     tval = self.target[key]
-                    smiohes = self.db.X[key]
+                    smiohes = self.db.X[key].getData()
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:

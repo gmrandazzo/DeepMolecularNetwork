@@ -11,7 +11,6 @@ import numpy as np
 from pathlib import Path
 import random
 
-
 def ReadOneHotEncodingCSV(ohe_csv):
     f = open(ohe_csv, "r")
     m = []
@@ -24,7 +23,6 @@ def ReadOneHotEncodingCSV(ohe_csv):
             x.append(str.split(line.strip(), ","))
     f.close()
     return np.array(m)
-
 
 def LoadOneHotEncodingCSVDir(ohe_dir):
     p = Path(ohe_dir).glob('**/*')
@@ -42,12 +40,28 @@ def LoadOneHotEncodingCSVDir(ohe_dir):
     input_shape = list(X.values())[0].shape[1:]
     return X, input_shape
 
+class DBFile(object):
+    def __init__(self, fname):
+        self.fname = Path(str(fname)).absolute()
+        self.dbf = None
+    
+    def getData(self):
+        if self.dbf is None:
+            self.dbf = np.load(self.fname,
+                               mmap_mode='r')
+            return self.dbf
+        else:
+            return self.dbf
+    
+    def get_shape(self):
+        return self.getData().shape
 
 class OHEDatabase(object):
-    def __init__(self):
+    def __init__(self, max_o_files=200):
         self.X = None
         self.input_shape = None
         self.ninstances = None
+        self.max_o_files = max_o_files
         return
 
     def saveOHEdb(self, dbpath):
@@ -65,6 +79,8 @@ class OHEDatabase(object):
         """
         Load OHE db from a numpy format
         """
+        # print("Loading %s ..." % (dbpath))
+        # start = time.time()
         self.X = {}
         for p in Path(dbpath).iterdir():
             if p.is_file() and ".npy" in str(p):
@@ -72,14 +88,18 @@ class OHEDatabase(object):
                 # Loading take too much time...
                 # Hence would be better to load the files while 
                 # the program is executed.
-                print("Loading %s" % (name))
-                arr = np.load(str(p),
-                              mmap_mode=None)
-                self.X[name] = arr
+                # print("Loading %s" % (name))
+                # arr = np.load(str(p),
+                #               mmap_mode='r')
+                # self.X[name] = arr
+                self.X[name] = DBFile(p)
             else:
                 continue
-        self.input_shape = list(self.X.values())[0].shape[1:]
+        self.input_shape = list(self.X.values())[0].get_shape()[1:]
         self.ninstances = len(self.X.keys())
+        # end = time.time()
+        # print("Done!")
+        #print("Elapsed time: %.2f sec" % (end-start))
 
     def loadOHEdbFromCSVDir(self, ohe_dir):
         self.X, self.input_shape = LoadOneHotEncodingCSVDir(ohe_dir)
