@@ -31,6 +31,7 @@ from modelhelpers import GetLoadModelFnc
 from dmnnio import ReadDescriptors
 from dmnnio import ReadTarget
 from dmnnio import WriteCrossValidationOutput
+from modelvalidation import TrainTestSplit
 from modelvalidation import RepeatedKFold
 from modelvalidation import CVGroupRead
 from modelvalidation import StaticGroupCV
@@ -97,7 +98,26 @@ class AIModel(object):
         print("Channel type: %s" % (conv3d_chtype))
         return tuple(input_shape), conv3d_chtype
 
-
+    def GetAvailableKeys(self):
+        allkeys = list(self.voxels.keys())
+        allkeys.extend(list(self.target.keys()))
+        if self.other_descriptors is not None:
+            allkeys.extend(list(self.other_descriptors.keys()))
+        allkeys = list(set(allkeys))
+        keys = []
+        if self.other_descriptors is not None:
+            for key in allkeys:
+                if key in self.voxels.keys() and key in self.other_descriptors.keys() and key in self.target.keys():
+                    keys.append(key)
+                else:
+                    continue
+        else:
+            for key in allkeys:
+                if key in self.voxels.keys() and key in self.target.keys():
+                    keys.append(key)
+                else:
+                    continue
+                
     def makeDataset(self, keys, nrotations):
         """
         Create a dataset giving:
@@ -166,23 +186,10 @@ class AIModel(object):
             """
             return batch_features, np.array(batch_target)
 
-    def VoxelTrainGenerator(self, train_keys, n_rot_repetitions=1):
+    def VoxelTrainGenerator(self, keys, n_rot_repetitions=1):
         """
         Keras voxel data augmentation
         """
-        keys = []
-        if self.other_descriptors is not None:
-            for key in train_keys:
-                if key in self.voxels.keys() and key in self.other_descriptors.keys() and key in self.target.keys():
-                    keys.append(key)
-                else:
-                    continue
-        else:
-            for key in train_keys:
-                if key in self.voxels.keys() and key in self.target.keys():
-                    keys.append(key)
-                else:
-                    continue
         i = 0
         while True:
             random.seed(datetime.now().microsecond)
@@ -194,20 +201,7 @@ class AIModel(object):
             i += 1
             yield X, y
 
-    def VoxelTestSetGenerator(self, test_keys, random_voxel_rotations):
-        keys = []
-        if self.other_descriptors is not None:
-            for key in test_keys:
-                if key in self.voxels.keys() and key in self.other_descriptors.keys() and key in self.target.keys():
-                    keys.append(key)
-                else:
-                    continue
-        else:
-            for key in test_keys:
-                if key in self.voxels.keys() and key in self.target.keys():
-                    keys.append(key)
-                else:
-                    continue
+    def VoxelTestSetGenerator(self, keys, random_voxel_rotations):
         X, y = self.makeDataset(keys, random_voxel_rotations)
         return X, y
 
@@ -239,7 +233,7 @@ def simplerun(db,
               tid=None):
     # Load the dataset
     ai = AIModel(csv_target, db, csv_descriptors)
-
+    available_keys = ai.GetAvailableKeys()
     train_keys = None
     test_keys = None
 
@@ -260,15 +254,7 @@ def simplerun(db,
             else:
                 train_keys.textened(cvgroups[key])
     else:
-        sub_target = {}
-        for key in ai.target.keys():
-            if key in ai.voxels.keys():
-                sub_target[key] = ai.target[key]
-            else:
-                continue
-        #train_keys, test_keys = MDCTrainTestSplit(sub_target)
-        #train_keys, test_keys = DISCTrainTestSplit(sub_target)
-        train_keys, test_keys = TrainTestSplit(list(sub_target.keys()),
+        train_keys, test_keys = TrainTestSplit(available_keys
                                                test_size=0.2,
                                                random_state)
 
@@ -323,8 +309,8 @@ def simplerun(db,
         print(model.summary())
     plot_model(model, to_file="model.png", show_shapes=True)
 
-    dname = csv_target.replace(".csv", "")
-    dname += db
+    dname = os.path.basename(csv_target).replace(".csv", "")
+    dname += os.path.basename(db)
     log_dir_ = ("./logs/%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (dname,
                                                           num_epochs,
                                                           train_steps_per_epoch_,
@@ -400,6 +386,7 @@ def cv(db,
        mout=None):
     # Load the dataset
     ai = AIModel(csv_target, db, csv_descriptors)
+    available_keys = ai.GetAvailableKeys()
     print("N. instances: %d" % (len(ai.target)))
     predictions = dict()
     valpredictions = dict()
@@ -440,7 +427,7 @@ def cv(db,
         cvmethod = StaticGroupCV(cvgroups)
         # cvmethod = RepeatedStratifiedCV(cvgroups, n_repeats_, 2)
     else:
-        cvmethod = RepeatedKFold(list(ai.target,keys()),
+        cvmethod = RepeatedKFold(available_keys,
                                  n_splits_,
                                  n_repeats_,
                                  random_state)
@@ -503,7 +490,7 @@ def cv(db,
             print("Total Summary")
             print(model.summary())
 
-        dname = csv_target.replace(".csv", "")
+        dname = os.path.basename(csv_target).replace(".csv", "")
         log_dir_ = ("./logs/cv%d_%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (cv_,
                                                                    dname,
                                                                    num_epochs,

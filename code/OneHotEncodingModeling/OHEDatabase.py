@@ -57,11 +57,10 @@ class DBFile(object):
         return self.getData().shape
 
 class OHEDatabase(object):
-    def __init__(self, max_o_files=200):
+    def __init__(self):
         self.X = None
         self.input_shape = None
         self.ninstances = None
-        self.max_o_files = max_o_files
         return
 
     def saveOHEdb(self, dbpath):

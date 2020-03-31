@@ -59,11 +59,9 @@ def WriteCrossValidationOutput(outcsv,
     f = open(outcsv, "w")
     f.write("Molecule")
     for i in range(ncols):
-        f.write(",y%d_true,y%d_pred,y%d_pred_stdev,y%d_pred_res,y%d_pred_freq" 
-% (i+1, i+1, i+1, i+1, i+1))
+        f.write(",y%d_true,y%d_pred,y%d_pred_stdev,y%d_pred_res,y%d_pred_freq" % (i+1, i+1, i+1, i+1, i+1))
     for j in range(ncols):
-        f.write(",y%d_recalc,y%d_recalc_stdev,y%d_recalc_res,y%d_recalc_freq" 
-% (i+1, i+1, i+1, i+1))
+        f.write(",y%d_recalc,y%d_recalc_stdev,y%d_recalc_res,y%d_recalc_freq" % (j+1, j+1, j+1, j+1))
     f.write("\n")
     
     keys = list(ground_true_dict.keys())

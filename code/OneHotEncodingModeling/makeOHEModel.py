@@ -586,7 +586,7 @@ class NNTrain(object):
                                                        r2_score(y_test_, ypred_test_)))
         else:
             for i in range(len(rtest_keys)):
-                fo.write("%s" % (rtest_keys[i]))
+                fo.write("%s," % (rtest_keys[i]))
                 for j in range(len(y_test[i])):
                     fo.write("%f,%f" % (y_test[i],
                                         ypred_test[i]))
