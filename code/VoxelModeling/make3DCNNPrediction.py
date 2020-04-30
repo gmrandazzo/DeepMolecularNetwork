@@ -27,12 +27,13 @@ K.clear_session()
 # Add path
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
-from misc import ReadDescriptors, LoadKerasModels
+from dmnnio import ReadDescriptors
+from modelhelpers import LoadKerasModels
 
 
 class ModelPredictor(object):
     def __init__(self, mpath, db, csv_descriptors=None):
-        self.models, self.odesc = LoadKerasModels(mpath)
+        self.mpath = mpath
         self.voxels = LoadVoxelDatabase(db)
         print("Max Conformations %d " % (len(list(self.voxels.values())[0])))
         if csv_descriptors is not None:
@@ -154,61 +155,57 @@ class ModelPredictor(object):
             return batch_features
 
 
-def predict(db,
-            desc_csv,
-            n_rotations,
-            minp,
-            pout):
+    def predict(self,
+                n_rotations,
+                pout):
 
-    mp = ModelPredictor(minp, db, desc_csv)
+        predictions = {}
+        for key in self.keys:
+            predictions[key] = []
 
-    predictions = {}
-    for key in mp.keys:
-        predictions[key] = []
+        print("N. rotations: %d" % (n_rotations))
+        x_topred = self.VoxelDataGenerator(n_rotations)
+        for model, _ in LoadKerasModels(self.mpath):
+            y_pred = list(model.predict(x_topred))
 
-    print("N. rotations: %d" % (n_rotations))
-    x_topred = mp.VoxelDataGenerator(n_rotations)
-    for model in mp.models:
-        y_pred = list(model.predict(x_topred))
+            print(x_topred.shape)
+            #fv = FeatureVisualization(model, x_topred)
+            #fv.GradCAMAlgorithm()
 
-        print(x_topred.shape)
-        #fv = FeatureVisualization(model, x_topred)
-        #fv.GradCAMAlgorithm()
+            # Store the prediction results based on the input generation
+            k = 0
+            c = 0
+            for i in range(len(y_pred)):
+                predictions[self.keys[k]].append(y_pred[i])
+                if c == n_rotations-1:
+                    k += 1
+                    c = 0
+                else:
+                    c += 1
 
-        # Store the prediction results based on the input generation
-        k = 0
-        c = 0
-        for i in range(len(y_pred)):
-            predictions[mp.keys[k]].append(y_pred[i])
-            if c == n_rotations-1:
-                k += 1
-                c = 0
+        fo = open(pout, "w")
+        for key in predictions.keys():
+            print("Store %s" % (key))
+            if len(predictions[key]) > 0:
+                ypavg = np.mean(predictions[key])
+                ystdev = np.std(predictions[key])
+                y_min = np.min(predictions[key])
+                y_max = np.max(predictions[key])
+                fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
+                                                    ypavg,
+                                                    ystdev,
+                                                    y_min,
+                                                    y_max))
             else:
-                c += 1
-
-    fo = open(pout, "w")
-    for key in predictions.keys():
-        print("Store %s" % (key))
-        if len(predictions[key]) > 0:
-            ypavg = np.mean(predictions[key])
-            ystdev = np.std(predictions[key])
-            y_min = np.min(predictions[key])
-            y_max = np.max(predictions[key])
-            fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
-                                                   ypavg,
-                                                   ystdev,
-                                                   y_min,
-                                                   y_max))
-        else:
-            continue
-    fo.close()
-    fo = open("all_y_%s" % (pout), "w")
-    for key in predictions.keys():
-        fo.write("%s," % (key))
-        for i in range(len(predictions[key])-1):
-            fo.write("%.4f," % (predictions[key][i]))
-        fo.write("%.4f\n" % (predictions[key][-1]))
-    fo.close()
+                continue
+        fo.close()
+        fo = open("all_y_%s" % (pout), "w")
+        for key in predictions.keys():
+            fo.write("%s," % (key))
+            for i in range(len(predictions[key])-1):
+                fo.write("%.4f," % (predictions[key][i]))
+            fo.write("%.4f\n" % (predictions[key][-1]))
+        fo.close()
 
 
 def main():
@@ -244,11 +241,9 @@ def main():
         print("--pout [default None]")
         print("\nUsage model prediction example: python %s --db OptimisedConformation/ --desc_csv rdkit.desc.csv --nr_rotations 100 --minp model --out output.csv\n" % (sys.argv[0]))
     else:
-        predict(args.db,
-                args.desc_csv,
-                args.n_rotations,
-                args.minp,
-                args.pout)
+        
+        mp = ModelPredictor(args.minp, args.db, args.desc_csv)
+        mp.predict(args.n_rotations, args.pout)
     return 0
 
 

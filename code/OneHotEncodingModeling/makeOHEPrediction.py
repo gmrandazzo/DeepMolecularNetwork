@@ -22,12 +22,12 @@ K.clear_session()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
-from misc import ReadDescriptors, LoadKerasModels
-
+from dmnnio import ReadDescriptors
+from modelhelpers import LoadKerasModels
 
 class ModelPredictor(object):
     def __init__(self, mpath, smiles, csv_descriptors=None):
-        self.models, self.odesc = LoadKerasModels(mpath)
+        self.mpath = mpath
         self.X, self.input_shape = self.ReadSMILES(smiles)
         if csv_descriptors is not None:
             self.desc, self.nfeatures, self.header = ReadDescriptors(csv_descriptors)
@@ -90,45 +90,42 @@ class ModelPredictor(object):
             batch_features = np.vstack([batch_features, x])
         return batch_features
 
+    def predict(self, pout):
+        
+        predictions = {}
+        for key in self.keys:
+            predictions[key] = []
 
-def predict(desc_csv,
-            minp,
-            pout):
-    mp = ModelPredictor(minp, desc_csv)
-    predictions = {}
-    for key in mp.keys:
-        predictions[key] = []
+        x_topred = self.GenData()
+        for model, _ in LoadKerasModels(self.mpath):
+            y_pred = list(model.predict(x_topred))
+            # Store the prediction results based on the input generation
+            for i in range(len(y_pred)):
+                predictions[self.keys[i]].append(y_pred[i])
 
-    x_topred = mp.GenData()
-    for model in mp.models:
-        y_pred = list(model.predict(x_topred))
-        # Store the prediction results based on the input generation
-        for i in range(len(y_pred)):
-            predictions[mp.keys[i]].append(y_pred[i])
-
-    fo = open(pout, "w")
-    for key in predictions.keys():
-        print("Store %s" % (key))
-        if len(predictions[key]) > 0:
-            ypavg = np.mean(predictions[key])
-            ystdev = np.std(predictions[key])
-            y_min = np.min(predictions[key])
-            y_max = np.max(predictions[key])
-            fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
-                                                   ypavg,
-                                                   ystdev,
-                                                   y_min,
-                                                   y_max))
-        else:
-            continue
-    fo.close()
-    fo = open("all_y_%s" % (pout), "w")
-    for key in predictions.keys():
-        fo.write("%s," % (key))
-        for i in range(len(predictions[key])-1):
-            fo.write("%.4f," % (predictions[key][i]))
-        fo.write("%.4f\n" % (predictions[key][-1]))
-    fo.close()
+        fo = open(pout, "w")
+        for key in predictions.keys():
+            print("Store %s" % (key))
+            if len(predictions[key]) > 0:
+                ypavg = np.mean(predictions[key])
+                ystdev = np.std(predictions[key])
+                y_min = np.min(predictions[key])
+                y_max = np.max(predictions[key])
+                fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
+                                                    ypavg,
+                                                    ystdev,
+                                                    y_min,
+                                                    y_max))
+            else:
+                continue
+        fo.close()
+        fo = open("all_y_%s" % (pout), "w")
+        for key in predictions.keys():
+            fo.write("%s," % (key))
+            for i in range(len(predictions[key])-1):
+                fo.write("%.4f," % (predictions[key][i]))
+            fo.write("%.4f\n" % (predictions[key][-1]))
+        fo.close()
 
 
 def main():
@@ -159,9 +156,9 @@ def main():
         print("--pout [default None]")
         print("\nUsage model prediction example: python %s --smiles dataset.smi --desc_csv rdkit.desc.csv --minp model --out output.csv\n" % (sys.argv[0]))
     else:
-        predict(args.desc_csv,
-                args.minp,
-                args.pout)
+        mp = ModelPredictor(args.minp,
+                            args.desc_csv)
+        mp.predict(args.pout)
     return 0
 
 
