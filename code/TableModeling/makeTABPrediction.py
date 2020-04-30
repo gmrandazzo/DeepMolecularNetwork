@@ -21,12 +21,13 @@ K.clear_session()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
-from misc import ReadDescriptors, LoadKerasModels
+from dmnnio import ReadDescriptors
+from modelhepers import LoadKerasModels
 from keras_additional_loss_functions import rmse, score
 
 class ModelPredictor(object):
     def __init__(self, mpath, csv_descriptors):
-        self.models, self.odesc = LoadKerasModels(mpath, {"score": score})
+        self.models, self.odesc = LoadKerasModels(mpath)
         self.desc, self.nfeatures, self.header = ReadDescriptors(csv_descriptors)
         self.keys = list(self.desc.keys())
         # check that all the descriptors
