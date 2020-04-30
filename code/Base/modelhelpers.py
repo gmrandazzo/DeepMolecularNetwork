@@ -71,12 +71,7 @@ def GetLoadModelFnc():
     except ImportError:
         return load_model
 
-def LoadKerasModels(mpath):
-    """
-    function to load models produced using cross validation by
-    make1Dmodel.py, make3DCNNmodel.py, makeSMILESmodel.py
-    """
-    # Load order descriptorss
+def ReadDescriptorOrder(mpath):
     odesc = []
     odesc_file = "%s/odesc_header.csv" % (str(Path(mpath).absolute()))
     if Path(odesc_file).exists():
@@ -84,7 +79,14 @@ def LoadKerasModels(mpath):
         for line in f:
             odesc.append(line.strip())
         f.close()
-    
+    return odesc
+
+def LoadKerasModels(mpath):
+    """
+    function to load models produced using cross validation by
+    make1Dmodel.py, make3DCNNmodel.py, makeSMILESmodel.py
+    """
+    # Load order descriptorss
     loadfnc = GetLoadModelFnc()
     models = []
     p = Path(mpath).glob('**/*.h5')
@@ -92,7 +94,7 @@ def LoadKerasModels(mpath):
     files = [x for x in p if x.is_file()]
     # Load models
     for file_ in files:
-        yield loadfnc(str(file_)), odesc
+        yield loadfnc(str(file_))
 
 def GetCudaDevices():
     """

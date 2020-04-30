@@ -165,7 +165,7 @@ class ModelPredictor(object):
 
         print("N. rotations: %d" % (n_rotations))
         x_topred = self.VoxelDataGenerator(n_rotations)
-        for model, _ in LoadKerasModels(self.mpath):
+        for model in LoadKerasModels(self.mpath):
             y_pred = list(model.predict(x_topred))
 
             print(x_topred.shape)

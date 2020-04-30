@@ -97,7 +97,7 @@ class ModelPredictor(object):
             predictions[key] = []
 
         x_topred = self.GenData()
-        for model, _ in LoadKerasModels(self.mpath):
+        for model in LoadKerasModels(self.mpath):
             y_pred = list(model.predict(x_topred))
             # Store the prediction results based on the input generation
             for i in range(len(y_pred)):
