@@ -51,6 +51,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 from FeatureImportance import FeatureImportance, WriteFeatureImportance
 
+from modelhelpers import GetTrainTestFnc
+from modelhelpers import GetValidationFnc
 from modelhelpers import GetKerasModel
 from modelhelpers import GetLoadModelFnc
 from modelhelpers import LoadKerasModels
@@ -452,9 +454,17 @@ class NNTrain(object):
         """
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
-        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size=0.20,
-                                               random_state=random_state)
+        
+        ttfn = GetTrainTestFnc()
+        if ttfn is None:
+            ttfn = TrainTestSplit
+        else:
+            print("Using custom train/test split function")
+            
+        train_keys, test_keys = ttfn(list(self.target.keys()),
+                                     test_size=0.20,
+                                     random_state=random_state)
+
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
 
@@ -585,22 +595,20 @@ class NNTrain(object):
         for key in self.target.keys():
             predictions[key] = []
             recalc[key] = []
-        for dataset_keys, test_keys in RepeatedKFold(list(self.target.keys()),
+        
+        valfn = GetValidationFnc()        
+        if valfn is None:
+            valfn = RepeatedKFold(list(self.target.keys()),
                                                      n_splits,
                                                      n_repeats,
-                                                     random_state=random_state):
-        
-            print("Dataset size: %d Test  size %d" % (len(dataset_keys),
-                                                      len(test_keys)))
+                                                     random_state=random_state,
+                                                     test_size=0.2)
+        else:
+            print("Using custom validation split function")
+            
+        for train_keys, val_keys, test_keys in valfn:
             # Some memory clean-up
             K.clear_session()
-            
-            # ntobj = int(np.ceil(len(sub_target)*0.1))
-            # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-            # train_keys, test_keys = DISCTrainTestSplit(sub_target)
-            train_keys, val_keys = TrainTestSplit(dataset_keys,
-                                                  test_size=0.20,
-                                                  random_state=random_state+cv_)
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
             # x_train, y_train = self.GenData(train_keys)
@@ -609,8 +617,9 @@ class NNTrain(object):
             # test_generator = self.DataGenerator(test_keys, batch_size_)
             x_test, y_test = self.GenData(test_keys)
             x_val, y_val = self.GenData(val_keys)
-            print("Train set size: %d Val set size %d" % (len(train_keys),
-                                                          len(val_keys)))
+            print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
+                                                                            len(val_keys),
+                                                                            len(test_keys)))
 
             model = None
             model_ = GetKerasModel()

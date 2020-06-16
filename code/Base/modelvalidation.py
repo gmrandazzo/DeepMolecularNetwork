@@ -91,21 +91,22 @@ def TrainTestSplit(keys_, test_size=0.20, random_state=None):
     return train_keys, test_keys
 
 
-def RepeatedKFold(keys, n_splits=5, n_repeats=20, random_state=None):
+def RepeatedKFold(keys, n_splits=5, n_repeats=20, random_state=None, test_size=0.2):
     """
     Repeated K-fold cross validation method starting from a dictionary target
     """
+    rs = None
+    if random_state is not None:
+        rs = random_state
+    else:
+        rs = 0
+
     for r in range(n_repeats):
-        if random_state is not None:
-            for train, test in KFold(keys,
-                                     n_splits,
-                                     random_state+r):
-                yield train, test
-        else:
-            for train, test in KFold(keys,
-                                     n_splits,
-                                     None):
-                yield train, test
+        for subset, test in KFold(keys,
+                                    n_splits,
+                                    rs+r):
+            train, val = TrainTestSplit(subset, test_size, rs+r)
+            yield train, val, test
 
 def KFold(keys, n_splits, random_state=None):
     if random_state is None:

@@ -48,6 +48,7 @@ from OHEDatabase import OHEDatabase
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
+from modelhelpers import GetTrainTestFnc
 from modelhelpers import GetKerasModel
 from modelhelpers import GetLoadModelFnc
 from modelhelpers import LoadKerasModels
@@ -473,10 +474,17 @@ class NNTrain(object):
                   random_state,
                   mout=None):
         print("N. instances: %d" % (len(self.target)))
-        # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
-        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size=0.20,
-                                               random_state=random_state)
+        
+        ttfn = GetTrainTestFnc()
+        if ttfn is None:
+            ttfn = TrainTestSplit
+        else:
+            print("Using custom train/test split function")
+            
+        train_keys, test_keys = ttfn(list(self.target.keys()),
+                                     test_size=0.20,
+                                     random_state=random_state)
+        
         print("Train set size: %d Test set size %d" % (len(train_keys),
                                                        len(test_keys)))
         model = None
@@ -629,24 +637,17 @@ class NNTrain(object):
             predictions[key] = []
             recalc[key] = []
 
-        for dataset_keys, test_keys in RepeatedKFold(list(self.target.keys()),
-                                                     n_splits,
-                                                     n_repeats,
-                                                     random_state=random_state):
-            print("Dataset size: %d Testset size %d" % (len(dataset_keys),
-                                                        len(test_keys)))
-            # ntobj = int(np.ceil(len(sub_target)*0.1))
-            # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-            train_keys, val_keys = TrainTestSplit(dataset_keys,
-                                                  test_size=0.20,
-                                                  random_state=random_state+cv_)
-
+        for train_keys, val_keys, test_keys in RepeatedKFold(list(self.target.keys()),
+                                                             n_splits,
+                                                             n_repeats,
+                                                             random_state=random_state,
+                                                             test_size=0.2):
+            print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
+                                                                            len(val_keys),
+                                                                            len(test_keys)))
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
             x_val, y_val, rval_keys = self.GenData(val_keys)
             x_test, y_test, rtest_keys = self.GenData(test_keys)
-
-            print("Train set size: %d Validation set size %d" % (len(train_keys),
-                                                                 len(val_keys)))
 
             # Some memory clean-up
             K.clear_session()

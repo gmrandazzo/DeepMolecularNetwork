@@ -24,7 +24,22 @@ def GetValidationFnc():
         print("Please create a model.py file in your directory")
         print("with a validation function which take as input a list of names.")
         return None
-
+    
+def GetTrainTestFnc():
+    """
+    Get custom model from model.py file
+    
+    """
+    p = Path('.')
+    sys.path.append("%s" % (str(p.absolute())))
+    try:
+        from model import traintest
+        return traintest
+    except ImportError:
+        print("Please create a model.py file in your directory")
+        print("with a traintest function which take as input a list of names, the %%test size and the random number initializator")
+        return None
+    
 def GetKerasModel():
     """
     Get custom model from model.py file

@@ -27,6 +27,7 @@ sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
 from modelhelpers import GetKerasModel
 from modelhelpers import GetLoadModelFnc
+from modelhelpers import GetTrainTestFnc
 
 from dmnnio import ReadDescriptors
 from dmnnio import ReadTarget
@@ -254,9 +255,15 @@ def simplerun(db,
             else:
                 train_keys.textened(cvgroups[key])
     else:
-        train_keys, test_keys = TrainTestSplit(available_keys
-                                               test_size=0.2,
-                                               random_state)
+        ttfn = GetTrainTestFnc()
+        if ttfn is None:
+            ttfn = TrainTestSplit
+        else:
+            print("Using custom train/test split function")
+        train_keys, test_keys = ttfn(list(self.target.keys()),
+                                test_size=0.20,
+                                random_state=random_state)
+        
 
     print("Trainin set size: %d Validation set size %d" % (len(train_keys),
                                                             len(test_keys)))
@@ -430,25 +437,15 @@ def cv(db,
         cvmethod = RepeatedKFold(available_keys,
                                  n_splits_,
                                  n_repeats_,
-                                 random_state)
+                                 random_state,
+                                 test_size=0.2)
     cv_ = 0
-    for dataset_keys, test_keys in cvmethod:
-        print("Dataset set size: %d Test set size %d" % (len(dataset_keys),
-                                                         len(test_keys)))
-        train_keys = None
-        val_keys = None
-        
+    for train_keys, val_keys, test_keys in cvmethod:
+        print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
+                                                                        len(val_keys),
+                                                                        len(test_keys)))
         # Some memory clean-up
         K.clear_session()
-        # get the 20% of the dataset to build a NN test set
-        # ntobj = int(np.ceil(len(sub_target)*0.2))
-        # train_keys, test_keys = MDCTrainTestSplit(sub_target, ntobj)
-        #train_keys, vak_keys = DISCTrainTestSplit(sub_target)
-        train_keys, val_keys = TrainTestSplit(dataset_keys,
-                                              test_size=0.2,
-                                              random_state+cv_)
-        print("Train set size: %d Validation set size %d" % (len(train_keys),
-                                                             len(val_keys)))
         # print(global_test_intexes)
         model = None
         model_ = GetKerasModel()
