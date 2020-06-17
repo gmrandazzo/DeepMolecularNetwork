@@ -77,8 +77,8 @@ def WriteCrossValidationOutput(outcsv,
                 ypstdev = 0.
                 ytrue = 0.
                 ypred = []
-                for k in range(j, len(prediction_dict[key]), ncols):
-                    ypred.append(float(prediction_dict[key][k]))
+                for k in range(len(prediction_dict[key])):
+                    ypred.append(float(prediction_dict[key][k][j]))
                 
                 freq = len(ypred)
                 ypavg = np.mean(ypred)
@@ -105,8 +105,8 @@ def WriteCrossValidationOutput(outcsv,
                 yravg = 0.
                 yrstdev = 0.
                 yrecalc = []
-                for k in range(j, len(recalculated_dict[key]), ncols):
-                    yrecalc.append(float(recalculated_dict[key][k]))
+                for k in range(len(recalculated_dict[key]), ncols):
+                    yrecalc.append(float(recalculated_dict[key][k][j]))
                 freq = len(yrecalc)
                 yravg = np.mean(yrecalc)
                 yrstdev = np.std(yrecalc)

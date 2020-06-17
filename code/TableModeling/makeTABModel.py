@@ -567,16 +567,20 @@ class NNTrain(object):
         mout_path = None
         if mout is not None:
             # Utilised to store the out path
-            mout_path = Path("%s_%s" % (time.strftime("%Y%m%d%H%M%S"), mout))
-            mout_path.mkdir()
-            # Save the descriptor order
-            f = open("%s/odesc_header.csv" % (str(mout_path.absolute())), "w")
-            for dname in self.xheader:
-                f.write("%s\n" % (dname))
-            f.close()
+            # mout_path = Path("%s_%s" % (time.strftime("%Y%m%d%H%M%S"), mout))
+            mout_path = Path(mout)
         else:
             # Utilised to store the out path
             mout_path = Path("%s_model" % (time.strftime("%Y%m%d%H%M%S")))
+        
+        last_model = None
+        if mout_path.exists() is True:
+            #Find the last model and restart the calculation from it.
+            p = Path(mout_path).glob('**/*.h5')
+            # getonlzfile numbers
+            mids = [int(str(x).split(".h5")[0]) for x in p if x.is_file()]
+            last_model = max(mids) # Restart from here...
+        else:
             mout_path.mkdir()
             # Save the descriptor order
             f = open("%s/odesc_header.csv" % (str(mout_path.absolute())), "w")
@@ -599,12 +603,13 @@ class NNTrain(object):
         valfn = GetValidationFnc()        
         if valfn is None:
             valfn = RepeatedKFold(list(self.target.keys()),
-                                                     n_splits,
-                                                     n_repeats,
-                                                     random_state=random_state,
-                                                     test_size=0.2)
+                                 n_splits,
+                                 n_repeats,
+                                 random_state=random_state,
+                                 test_size=0.2)
         else:
             print("Using custom validation split function")
+            valfn = valfn(list(self.target.keys()))
             
         for train_keys, val_keys, test_keys in valfn:
             # Some memory clean-up
@@ -612,7 +617,6 @@ class NNTrain(object):
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             train_generator = self.DataGenerator(train_keys, batch_size_)
             # x_train, y_train = self.GenData(train_keys)
-
             # test_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             # test_generator = self.DataGenerator(test_keys, batch_size_)
             x_test, y_test = self.GenData(test_keys)
@@ -620,48 +624,51 @@ class NNTrain(object):
             print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
                                                                             len(val_keys),
                                                                             len(test_keys)))
-
-            model = None
-            model_ = GetKerasModel()
-            if model_ is None:
-                model = example_build_model(self.nfeatures,
-                                            nunits,
-                                            ndense_layers)
-            else:
-                model = model_(self.nfeatures,
-                               nunits,
-                               ndense_layers)
-
-            print(model.summary())
-            dname = cvout.replace(".csv", "")
-            b = batch_size_
-            log_dir_ = ("./logs/cv%d_%s_#b%d_#e%d_#u%d_#dl%d_" % (cv_,
-                                                                  dname,
-                                                                  b,
-                                                                  num_epochs,
-                                                                  nunits,
-                                                                  ndense_layers))
-            log_dir_ += time.strftime("%Y%m%d%H%M%S")
-
             model_output = "%s/%d.h5" % (str(mout_path.absolute()), cv_)
-            callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                      histogram_freq=0,
-                                      write_graph=False,
-                                      write_images=False),
-                          ModelCheckpoint(model_output,
-                                          monitor='val_loss',
-                                          verbose=0,
-                                          save_best_only=True)]
+            
+            if last_model is None:
+                model = None
+                model_ = GetKerasModel()
+                if model_ is None:
+                    model = example_build_model(self.nfeatures,
+                                                nunits,
+                                                ndense_layers)
+                else:
+                    model = model_(self.nfeatures,
+                                nunits,
+                                ndense_layers)
 
-            model.fit_generator(train_generator,
-                                steps_per_epoch=train_steps_per_epoch,
-                                epochs=num_epochs,
-                                verbose=self.verbose,
-                                validation_data=(x_val, y_val),
-                                # validation_data=test_generator,
-                                # validation_steps=test_steps_per_epoch,
-                                callbacks=callbacks_)
-  
+                print(model.summary())
+                dname = cvout.replace(".csv", "")
+                b = batch_size_
+                log_dir_ = ("./logs/cv%d_%s_#b%d_#e%d_#u%d_#dl%d_" % (cv_,
+                                                                    dname,
+                                                                    b,
+                                                                    num_epochs,
+                                                                    nunits,
+                                                                    ndense_layers))
+                log_dir_ += time.strftime("%Y%m%d%H%M%S")
+                callbacks_ = [TensorBoard(log_dir=log_dir_,
+                                        histogram_freq=0,
+                                        write_graph=False,
+                                        write_images=False),
+                            ModelCheckpoint(model_output,
+                                            monitor='val_loss',
+                                            verbose=0,
+                                            save_best_only=True)]
+
+                model.fit_generator(train_generator,
+                                    steps_per_epoch=train_steps_per_epoch,
+                                    epochs=num_epochs,
+                                    verbose=self.verbose,
+                                    validation_data=(x_val, y_val),
+                                    # validation_data=test_generator,
+                                    # validation_steps=test_steps_per_epoch,
+                                    callbacks=callbacks_)
+            else:
+                if last_model-1 == cv_:
+                    last_model = None
+
             model_ = GetLoadModelFnc()(model_output)
 
             y_recalc = []
