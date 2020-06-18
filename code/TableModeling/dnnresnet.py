@@ -6,12 +6,21 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-from keras.layers import Dense, BatchNormalization, Activation
-from keras.layers import Input, Flatten
-from keras.optimizers import Adam
-from keras.regularizers import l2
-from keras import backend as K
-from keras.models import Model
+import tensorflow
+if int(tensorflow.__version__[0]) > 1:
+    from tensorflow.keras.layers import Dense, BatchNormalization, Activation
+    from tensorflow.keras.layers import Input, Flatten
+    from tensorflow.keras.optimizers import Adam
+    from tensorflow.keras.regularizers import l2
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.models import Model
+else:
+    from keras.layers import Dense, BatchNormalization, Activation
+    from keras.layers import Input, Flatten
+    from keras.optimizers import Adam
+    from keras.regularizers import l2
+    from keras import backend as K
+    from keras.models import Model
 
 def dnn_resnet_layer(inputs,
                      nunits=100,

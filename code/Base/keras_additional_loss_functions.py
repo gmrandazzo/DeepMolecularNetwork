@@ -6,7 +6,11 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-from keras import backend as K
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+else:
+    from keras import backend as K
 import numpy as np
 
 

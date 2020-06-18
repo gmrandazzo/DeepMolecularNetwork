@@ -6,44 +6,60 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 import os
-
-
-from keras import backend as K
-# Some memory clean-up
-K.clear_session()
+import sys
+from sys import argv
 import argparse
 from pathlib import Path
 import numpy as np
 import random
 
-from keras.callbacks import Callback
-from keras.callbacks import EarlyStopping
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import TensorBoard
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.callbacks import Callback
+    from tensorflow.keras.callbacks import EarlyStopping
+    from tensorflow.keras.callbacks import ModelCheckpoint
+    from tensorflow.keras.callbacks import TensorBoard
 
-from keras.models import Model
-from keras.models import Sequential
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.models import Sequential
 
-from keras.layers import add
-from keras.layers import Input
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import BatchNormalization
-from keras.layers import Activation
-from keras.layers import LeakyReLU
-from keras import optimizers
-from keras.utils import np_utils
+    from tensorflow.keras.layers import add
+    from tensorflow.keras.layers import Input
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.layers import Dropout
+    from tensorflow.keras.layers import BatchNormalization
+    from tensorflow.keras.layers import Activation
+    from tensorflow.keras.layers import LeakyReLU
+    from tensorflow.keras import optimizers
+else:
+    from keras import backend as K
+    from keras.callbacks import Callback
+    from keras.callbacks import EarlyStopping
+    from keras.callbacks import ModelCheckpoint
+    from keras.callbacks import TensorBoard
+
+    from keras.models import Model
+    from keras.models import Sequential
+
+    from keras.layers import add
+    from keras.layers import Input
+    from keras.layers import Dense
+    from keras.layers import Dropout
+    from keras.layers import BatchNormalization
+    from keras.layers import Activation
+    from keras.layers import LeakyReLU
+    from keras import optimizers
 
 # from sklearn.model_selection import ParameterGrid
 
-import sys
-from sys import argv
+# Global memory clean-up
+K.clear_session()
+
 import time
-import numpy as np
 from math import ceil
 import datetime
 # import tqdm
-
 from dnnresnet import dnn_resnet_layer
 
 
@@ -70,7 +86,7 @@ from dmnnio import ReadDescriptors
 from dmnnio import ReadTarget
 
 
-def example_build_model(nfeatures, nunits, ndense_layers):
+def example_build_model(nfeatures, nunits, ndense_layers, ntargets):
     model = Sequential()
     # model.add(Conv1D(16, kernel_size=7, strides=1, activation="relu", input_shape=(nfeatures,)))
     # model.add(Dense(nunits, input_shape=(nfeatures,), activation='relu'))
@@ -81,7 +97,7 @@ def example_build_model(nfeatures, nunits, ndense_layers):
         model.add(Dense(nunits, activation='relu'))
         model.add(Dropout(0.1))
     model.add(Dense(nunits, activation='relu'))
-    model.add(Dense(1))
+    model.add(Dense(ntargets))
     # Compile model
     #model.compile(loss='mse',
     model.compile(loss='mse',
@@ -129,14 +145,14 @@ def build_gridsearch_model(nfeatures, ndense_layers, nunits, activation, dropout
 
     for i in range(ndense_layers):
         model.add(Dense(nunits))
-        if activation is "relu":
+        if activation == "relu":
             model.add(Activation('relu'))
-        elif activation is "leakyrelu":
+        elif activation == "leakyrelu":
             model.add(Activation('relu'))
         else:
             print("No activation %s found" % (activation))
-
-        if dropout is "on":
+    
+        if dropout == "on":
             model.add(Dropout(0.1))
 
     model.add(Dense(1))
@@ -476,7 +492,8 @@ class NNTrain(object):
             if model_ is None:
                 model = example_build_model(self.nfeatures,
                                             nunits,
-                                            ndense_layers)
+                                            ndense_layers,
+                                            self.ntargets)
             else:
                 model = model_(self.nfeatures,
                                nunits,
@@ -578,8 +595,11 @@ class NNTrain(object):
             #Find the last model and restart the calculation from it.
             p = Path(mout_path).glob('**/*.h5')
             # getonlzfile numbers
-            mids = [int(str(x).split(".h5")[0]) for x in p if x.is_file()]
-            last_model = max(mids) # Restart from here...
+            mids = [int(x.stem) for x in p if x.is_file()]
+            if len(mids) > 0:
+                last_model = max(mids) # Restart from here...
+            else:
+                last_model = None
         else:
             mout_path.mkdir()
             # Save the descriptor order
@@ -632,7 +652,8 @@ class NNTrain(object):
                 if model_ is None:
                     model = example_build_model(self.nfeatures,
                                                 nunits,
-                                                ndense_layers)
+                                                ndense_layers,
+                                                self.ntargets)
                 else:
                     model = model_(self.nfeatures,
                                 nunits,
@@ -678,7 +699,7 @@ class NNTrain(object):
                 p = model_.predict(row)[0] # we process compound by compound
                 y_recalc.append(p)
                 y_true_recalc.append(self.target[key])
-                recalc[key].extend(p)
+                recalc[key].append(p)
 
             ypred_test = model_.predict(x_test)
             ypred_val = model_.predict(x_val)
@@ -691,7 +712,7 @@ class NNTrain(object):
 
             # Store validation prediction
             for i in range(len(ypred_test)):
-                predictions[test_keys[i]].extend(list(ypred_test[i]))
+                predictions[test_keys[i]].append(list(ypred_test[i]))
 
             # Store the cross validation model
             #if mout_path is not None:
@@ -741,7 +762,7 @@ def main():
                         help='Feature Importance file')
 
     args = parser.parse_args(argv[1:])
-    if args.xmatrix is None or args.ytarget is None:
+    if args.xmatrix is None or args.ytarget is None or args.batch_size is None:
         print("ERROR! Please specify input table to train!")
         print("\n Usage: %s --xmatrix [input file] --ytarget [input file] --epochs [int] --batch_size [int]" % (argv[0]))
     else:

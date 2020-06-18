@@ -8,7 +8,11 @@
 
 import sys
 from pathlib import Path
-from keras.models import load_model
+import tensorflow
+if int(tensorflow.__version__[0]) > 1:
+    from tensorflow.keras.models import load_model
+else:
+    from keras.models import load_model
 
 def GetValidationFnc():
     """

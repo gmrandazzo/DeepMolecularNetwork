@@ -12,26 +12,51 @@ from pathlib import Path
 import numpy as np
 import random
 from datetime import datetime
-from keras import optimizers
-from keras.callbacks import Callback
-from keras.callbacks import ModelCheckpoint
-from keras.callbacks import TensorBoard
 
-from keras.models import Model
-from keras.models import Input
-from keras.models import Sequential
-from keras.models import load_model
-from keras.layers import Conv2D
-from keras.layers import Flatten
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.layers import Activation
-from keras.layers import MaxPooling2D
-from keras.layers import ZeroPadding2D
-from keras.layers import BatchNormalization
-from keras.layers import AveragePooling2D
-from keras.layers import Concatenate
-from keras.utils import np_utils
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import optimizers
+    from tensorflow.keras.callbacks import Callback
+    from tensorflow.keras.callbacks import ModelCheckpoint
+    from tensorflow.keras.callbacks import TensorBoard
+
+    from tensorflow.keras.models import Model
+    from tensorflow.keras import Input
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.layers import Conv2D
+    from tensorflow.keras.layers import Flatten
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.layers import Dropout
+    from tensorflow.keras.layers import Activation
+    from tensorflow.keras.layers import MaxPooling2D
+    from tensorflow.keras.layers import ZeroPadding2D
+    from tensorflow.keras.layers import BatchNormalization
+    from tensorflow.keras.layers import AveragePooling2D
+    from tensorflow.keras.layers import Concatenate
+    from tensorflow.keras import backend as K
+else:
+    from keras import optimizers
+    from keras.callbacks import Callback
+    from keras.callbacks import ModelCheckpoint
+    from keras.callbacks import TensorBoard
+
+    from keras.models import Model
+    from keras.models import Input
+    from keras.models import Sequential
+    from keras.models import load_model
+    from keras.layers import Conv2D
+    from keras.layers import Flatten
+    from keras.layers import Dense
+    from keras.layers import Dropout
+    from keras.layers import Activation
+    from keras.layers import MaxPooling2D
+    from keras.layers import ZeroPadding2D
+    from keras.layers import BatchNormalization
+    from keras.layers import AveragePooling2D
+    from keras.layers import Concatenate
+    from keras import backend as K
+
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_absolute_error as mae
 from sklearn.metrics import mean_squared_error as mse
@@ -40,8 +65,6 @@ import sys
 from sys import argv
 import time
 import numpy as np
-from keras import backend as K
-
 
 from OHEDatabase import OHEDatabase
 
@@ -333,8 +356,8 @@ class NNTrain(object):
                         batch_x_bh1.append(bfeat)
                         batch_x_bh2.append(cfeat)
                     batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
-                    batch_x_bh2 = np.array(batch_x_bh2).astype(float)
-                    yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
+                    batch_x_bh2 = np.array(batch_x_bh2)
+                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float) 
             else:
                 # Random selection several time...
                 while True:
@@ -360,8 +383,8 @@ class NNTrain(object):
                         batch_x_bh1.append(bfeat)
                         batch_x_bh2.append(cfeat)
                     batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
-                    batch_x_bh2 = np.array(batch_x_bh2).astype(float)
-                    yield([batch_x_bh1, batch_x_bh2], np.array(batch_y))
+                    batch_x_bh2 = np.array(batch_x_bh2)
+                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float)
         else:
             keylst = list(set(list(self.db.X.keys())).intersection(list(self.target.keys())))
             keylst = list(set(keylst).intersection(keys))
@@ -385,7 +408,7 @@ class NNTrain(object):
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
-                    yield(batch_x, np.array(batch_y))
+                    yield batch_x.astype(float), np.array(batch_y).astype(float)
             else:
                 while True:
                     random.seed(datetime.now().microsecond)
@@ -406,7 +429,7 @@ class NNTrain(object):
                         batch_y.append(tval)
                         batch_x.append(smiohe)
                     batch_x = np.array(batch_x)[:, :, :, np.newaxis]
-                    yield(batch_x, np.array(batch_y))
+                    yield batch_x.astype(float), np.array(batch_y).astype(float)
 
     def GenData(self, keys):
         if self.dx is not None:
@@ -433,8 +456,8 @@ class NNTrain(object):
                 except KeyError:
                     print("Molecule %s not found" % (key))
             batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
-            batch_x_bh2 = np.array(batch_x_bh2).astype(float)
-            return [batch_x_bh1, batch_x_bh2], np.array(batch_y), ret_keys
+            batch_x_bh2 = np.array(batch_x_bh2)
+            return [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float), ret_keys
         else:
             ret_keys = []
             batch_features = []
@@ -463,7 +486,7 @@ class NNTrain(object):
                                                               shape[2], 1)
             """
             batch_features = np.array(batch_features)[:, :, :, np.newaxis]
-            return batch_features, np.array(batch_target), ret_keys
+            return batch_features.astype(float), np.array(batch_target).astype(float), ret_keys
 
     def simplerun(self,
                   batch_size_,
@@ -541,7 +564,7 @@ class NNTrain(object):
         """
         callbacks_ = [TensorBoard(log_dir=log_dir_,
                                   histogram_freq=0,
-                                  write_graph=False,
+                                  wx_trainrite_graph=False,
                                   write_images=False),
                       EarlyStopping(monitor='val_loss',
                                     min_delta=0,
@@ -734,7 +757,7 @@ class NNTrain(object):
                                    custom_objects={"score": score})
             yrecalc = bestmodel.predict(x_train)
             for i in range(len(yrecalc)):
-                recalc[train_keys[i]].extend(list(yrecalc[i]))
+                recalc[train_keys[i]].append(list(yrecalc[i]))
 
             ypred_val = bestmodel.predict(x_val)
             print("Test R2: %.4f" % (r2_score(y_val, ypred_val)))
@@ -743,7 +766,7 @@ class NNTrain(object):
             # exp_pred_plot(y_val_, ypred[:,0])
             print("Validation R2: %.4f" % (r2_score(y_test, ypred_test)))
             for i in range(len(ypred_test)):
-                predictions[test_keys[i]].extend(list(ypred_test[i]))
+                predictions[test_keys[i]].append(list(ypred_test[i]))
 
             """
             if fimpfile is not None:
@@ -756,99 +779,7 @@ class NNTrain(object):
             cv_ += 1
 
         WriteCrossValidationOutput(cvout, self.target, predictions, recalc)
-        """
-        fo = open(cvout, "w")
-        if self.tgtshape > 1:
-            for i in range(len(rtest_keys)):
-                fo.write("%s," % (rtest_keys[i]))
-                for j in range(len(y_test[i])-1):
-                    fo.write("%f,%f," % (y_test[i][j], ypred_test[i][j]))
-                fo.write("%f,%f\n" % (y_test[i][-1], ypred_test[i][-1]))
-            fo.close()
-            # Then calculate R2 and Q2 for each output...
-            for j in range(ypred_test.shape[1]):
-                y_train_ = []
-                yrecalc_ = []
-                y_test_ = []
-                ypred_test_ = []
-                for i in range(ypred_test.shape[0]):
-                    y_train_.append(y_train[i][j])
-                    yrecalc_.append(yrecalc[i][j])
-                    y_test_.append(y_test[i][j])
-                    ypred_test_.append(ypred_test[i][j])
-                print("Output %d R2: %.4f Q2: %.4f" % (j,
-                                                       r2_score(y_train_,
-                                                                yrecalc_),
-                                                       r2_score(y_test_,
-                                                                ypred_test_)))
-        else:
-            for i in range(len(rtest_keys)):
-                fo.write("%s,%f,%f\n" % (rtest_keys[i],
-                                         y_test[i],
-                                         ypred_test[i]))
-            fo.close()
-            print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
-                                         r2_score(y_test, ypred_test)))
-
-        fo = open(cvout, "w")
-        if self.tgtshape > 1:
-            for key in predictions.keys():
-                fo.write("%s," % (key))
-
-                if len(predictions[key]) > 0:
-                    freq = len(predictions[key])
-                    ypavg = np.mean(predictions[key])
-                    ystdev = np.std(predictions[key])
-                    res = self.target[key] - ypavg
-                    fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (self.target[key],
-                                                          ypavg,
-                                                          ystdev,
-                                                          res,
-                                                          freq))
-                else:
-                    fo.write("%.4f,0.0,0.0,0.0," % (self.target[key]))
-
-                if len(recalc[key]) > 0:
-                    freq_r = len(recalc[key])
-                    ypavg_r = np.mean(recalc[key])
-                    ystdev_r = np.std(recalc[key])
-                    res_r = self.target[key] - ypavg_r
-                    fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
-                                                      ystdev_r,
-                                                      res_r,
-                                                      freq_r))
-                else:
-                    fo.write("0.0,0.0,0.0\n")
-        else:
-            for key in predictions.keys():
-                fo.write("%s," % (key))
-                if len(predictions[key]) > 0:
-                    freq = len(predictions[key])
-                    ypavg = np.mean(predictions[key])
-                    ystdev = np.std(predictions[key])
-                    res = self.target[key] - ypavg
-                    fo.write("%.4f,%.4f,%.4f,%.4f,%d," % (self.target[key],
-                                                          ypavg,
-                                                          ystdev,
-                                                          res,
-                                                          freq))
-                else:
-                    fo.write("%.4f,0.0,0.0,0.0," % (self.target[key]))
-
-                if len(recalc[key]) > 0:
-                    freq_r = len(recalc[key])
-                    ypavg_r = np.mean(recalc[key])
-                    ystdev_r = np.std(recalc[key])
-                    res_r = self.target[key] - ypavg_r
-                    fo.write("%.4f,%.4f,%.4f,%d\n" % (ypavg_r,
-                                                      ystdev_r,
-                                                      res_r,
-                                                      freq_r))
-                else:
-                    fo.write("0.0,0.0,0.0\n")
-        fo.close()
-        """
-
+       
     def runloo(self, batch_size_, num_epochs, ndense_layers, nunits, cvout):
         print("N. instances: %d" % (len(self.target)))
         predictions = dict()
@@ -974,7 +905,7 @@ class NNTrain(object):
                 """
                 # simple architecture
                 units = v[0]
-                layers = v[1]
+                layers = v[1]tensorflow
                 act = v[2]
                 drop = v[3]
                 s = ("%s-%s-%s-%s" % (units, layers, act, drop))

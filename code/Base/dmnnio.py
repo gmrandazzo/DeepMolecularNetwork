@@ -105,7 +105,7 @@ def WriteCrossValidationOutput(outcsv,
                 yravg = 0.
                 yrstdev = 0.
                 yrecalc = []
-                for k in range(len(recalculated_dict[key]), ncols):
+                for k in range(len(recalculated_dict[key])):
                     yrecalc.append(float(recalculated_dict[key][k][j]))
                 freq = len(yrecalc)
                 yravg = np.mean(yrecalc)

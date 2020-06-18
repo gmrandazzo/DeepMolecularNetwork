@@ -15,7 +15,11 @@ import sys
 # from sklearn.model_selection import RepeatedKFold
 # from tensorflow import set_random_seed
 import os
-from keras import backend as K
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+else:
+    from keras import backend as K
 # Some memory clean-up
 K.clear_session()
 

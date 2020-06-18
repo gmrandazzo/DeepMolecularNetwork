@@ -6,12 +6,20 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-from keras import backend as K
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.callbacks import TensorBoard
+    from tensorflow.keras.callbacks import ModelCheckpoint
+    from tensorflow.keras.utils import plot_model
+else:
+    from keras import backend as K
+    from keras.callbacks import TensorBoard
+    from keras.callbacks import ModelCheckpoint
+    from keras.utils import plot_model
+
 import argparse
 from model_builder import *
-from keras.callbacks import TensorBoard
-from keras.callbacks import ModelCheckpoint
-from keras.utils import plot_model
 import numpy as np
 from pathlib import Path
 import random
@@ -556,7 +564,7 @@ def cv(db,
         k = 0
         c = 0
         for i in range(len(ypred_val)):
-            valpredictions[test_keys[k]].extend(list(ypred_val[i]))
+            valpredictions[test_keys[k]].append(list(ypred_val[i]))
             if c == n_rot_test-1:
                 k += 1
                 c = 0
@@ -567,7 +575,7 @@ def cv(db,
         k = 0
         c = 0
         for i in range(len(ypred_test)):
-            predictions[test_keys[k]].extend(list(ypred_test[i]))
+            predictions[test_keys[k]].append(list(ypred_test[i]))
             if c == n_rot_test-1:
                 k += 1
                 c = 0
