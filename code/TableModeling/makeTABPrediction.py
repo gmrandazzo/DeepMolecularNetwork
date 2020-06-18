@@ -14,10 +14,13 @@ import sys
 # from sklearn.model_selection import RepeatedKFold
 # from tensorflow import set_random_seed
 import os
-from keras import backend as K
+import tensorflow 
+if int(tensorflow.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+else:
+    from keras import backend as K
 # Some memory clean-up
 K.clear_session()
-
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
