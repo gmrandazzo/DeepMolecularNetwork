@@ -760,6 +760,8 @@ def main():
                         help='Model out path')
     parser.add_argument('--featimp', default=None, type=str,
                         help='Feature Importance file')
+    parser.add_argument('--verbose', default=0, type=int,
+                        help='Set verbosity 0, 1, 2')
 
     args = parser.parse_args(argv[1:])
     if args.xmatrix is None or args.ytarget is None or args.batch_size is None:
@@ -772,7 +774,7 @@ def main():
         X_raw, nfeatures_, xheader = ReadDescriptors(args.xmatrix)
         target = ReadTarget(args.ytarget)
         nn = NNTrain(X_raw, target, xheader)
-        nn.verbose = 0
+        nn.verbose = args.verbose
         if args.cvout is None and args.gsout is None:
             nn.simplerun(args.batch_size,
                          args.epochs,
@@ -781,7 +783,6 @@ def main():
                          args.random_state,
                          args.mout)
         elif args.cvout is not None and args.gsout is None:
-            nn.verbose = 1
             nn.runcv(args.batch_size,
                      args.epochs,
                      args.ndense_layers,
