@@ -8,11 +8,12 @@
 
 import numpy as np
 
-"""
-Generate a mask to be used in custom loss function
-with missing values in targets
-"""
-def genMask(y_true, mask_value=9999):
+
+def genMask(y_true, mask_value=-9999.):
+    """
+    Generate a mask to be used in custom loss function
+    with missing values in targets
+    """
     mask = []
     for y in y_true:
         if int(abs(y-mask_value)) == 0:
@@ -22,7 +23,10 @@ def genMask(y_true, mask_value=9999):
     return mask
 
 
-def MSE(y_true, y_pred):
+def MSE(y_true, y_pred, mask_value=-9999.):
+    """
+    Calculate the MSE
+    """
     try:
         mseavg = 0.
         rows = len(y_true)
@@ -33,17 +37,19 @@ def MSE(y_true, y_pred):
             for i in range(rows):
                 yt.append(y_true[i][j])
                 yp.append(y_pred[i][j])
-            w = np.array(genMask(yt))
-            mseavg += (np.square((np.array(yt)*w) - 
-(np.array(yp)*w))).mean(axis=0)
+            w = np.array(genMask(yt, mask_value))
+            a = np.array(yt)*w
+            b = np.array(yp)*w
+            mseavg += np.square(a - b).mean(axis=0)
         return mseavg/float(cols)
     except TypeError:
-        w = genMask(y_true)
-        return (np.square((np.array(y_true)*w) - 
-(np.array(y_pred)*w))).mean(axis=0)
-            
+        w = np.array(genMask(y_true, mask_value))
+        a = np.array(yt)*w
+        b = np.array(yp)*w
+        return np.square(a - b).mean(axis=0)
 
-def MAE(y_true, y_pred):
+
+def MAE(y_true, y_pred, mask_value=-9999.):
     try:
         maeavg = 0.
         rows = len(y_true)
@@ -54,17 +60,19 @@ def MAE(y_true, y_pred):
             for i in range(rows):
                 yt.append(y_true[i][j])
                 yp.append(y_pred[i][j])
-            w = np.array(genMask(yt))
-            maeavg += (np.abs((np.array(yt)*w) - 
-(np.array(yp)*w))).mean(axis=0)
+            w = np.array(genMask(yt, mask_value))
+            a = np.array(yt)*w
+            b = np.array(yp)*w
+            maeavg += np.abs(a - b).mean(axis=0)
         return maeavg/float(cols)
     except TypeError:
-        w = genMask(y_true)
-        return (np.square((np.array(y_true)*w) - 
-(np.array(y_pred)*w))).mean(axis=0)
+        w = genMask(y_true, mask_value)
+        a = np.array(yt)*w
+        b = np.array(yp)*w
+        return np.abs(a - b).mean(axis=0)
 
 
-def RSQ(y_true, y_pred):
+def RSQ(y_true, y_pred, mask_value=-9999.):
     try:
         rsqavg = 0.
         rows = len(y_true)
@@ -89,8 +97,10 @@ def RSQ(y_true, y_pred):
         return 1. - (rss/tss)
 
 
-def LOGMAE(y_true, y_pred):
+def LOGMAE(y_true, y_pred, mask_value=-9999.):
     """
-    Score function 1
+    Log MAE
     """
-    return np.log(np.mean(np.abs(np.array(y_true) - np.array(y_pred)), axis=0))
+    return np.log(MAE(np.array(y_true),
+                      np.array(y_pred),
+                      mask_value))

@@ -16,8 +16,6 @@ import random
 import tensorflow as tf
 if int(tf.__version__[0]) > 1:
     from tensorflow.keras import backend as K
-    from tensorflow.keras.callbacks import Callback
-    from tensorflow.keras.callbacks import EarlyStopping
     from tensorflow.keras.callbacks import ModelCheckpoint
     from tensorflow.keras.callbacks import TensorBoard
 
@@ -34,8 +32,6 @@ if int(tf.__version__[0]) > 1:
     from tensorflow.keras import optimizers
 else:
     from keras import backend as K
-    from keras.callbacks import Callback
-    from keras.callbacks import EarlyStopping
     from keras.callbacks import ModelCheckpoint
     from keras.callbacks import TensorBoard
 
@@ -51,15 +47,11 @@ else:
     from keras.layers import LeakyReLU
     from keras import optimizers
 
-# from sklearn.model_selection import ParameterGrid
-
-# Global memory clean-up
-K.clear_session()
+from sklearn.model_selection import ParameterGrid
 
 import time
 from math import ceil
 import datetime
-# import tqdm
 from dnnresnet import dnn_resnet_layer
 
 
@@ -78,7 +70,6 @@ from modelvalidation import MDCTrainTestSplit
 from modelvalidation import DISCTrainTestSplit
 from modelvalidation import TrainTestSplit
 
-# from keras_additional_loss_functions import rmse, score
 from numpy_loss_functions import RSQ, MSE, MAE
 
 from dmnnio import WriteCrossValidationOutput
@@ -99,10 +90,10 @@ def example_build_model(nfeatures, nunits, ndense_layers, ntargets):
     model.add(Dense(nunits, activation='relu'))
     model.add(Dense(ntargets))
     # Compile model
-    #model.compile(loss='mse',
+    # model.compile(loss='mse',
     model.compile(loss='mse',
-                  optimizer=optimizers.Adam(lr=0.00005), metrics=['mse', 
-'mae'])
+                  optimizer=optimizers.Adam(lr=0.00005),
+                  metrics=['mse', 'mae'])
     return model
 
 
@@ -125,21 +116,26 @@ def build_dnn_resnet_model(nfeatures, nunits, ndense_layers):
 
     # Instantiate the stack of residual units
     for res_block in range(ndense_layers):
-          y = dnn_resnet_layer(inputs=x, nunits=nunits, activation='relu')
-          y = dnn_resnet_layer(inputs=y, nunits=nunits, activation=None)
-          x = add([x, y])
-          x = Activation('relu')(x)
-          # num_filters *= 2
-
+        y = dnn_resnet_layer(inputs=x, nunits=nunits, activation='relu')
+        y = dnn_resnet_layer(inputs=y, nunits=nunits, activation=None)
+        x = add([x, y])
+        x = Activation('relu')(x)
+        # num_filters *= 2
     outputs = Dense(1)(x)
 
     # Instantiate model.
     model = Model(inputs=inputs, outputs=outputs)
-    model.compile(loss='mse', optimizer=optimizers.Adam(), metrics=['mse', 'mae', score])
+    model.compile(loss='mse',
+                  optimizer=optimizers.Adam(),
+                  metrics=['mse', 'mae'])
     return model
 
 
-def build_gridsearch_model(nfeatures, ndense_layers, nunits, activation, dropout):
+def build_gridsearch_model(nfeatures,
+                           ndense_layers,
+                           nunits,
+                           activation,
+                           dropout):
     model = Sequential()
     model.add(BatchNormalization(input_shape=(nfeatures,)))
 
@@ -148,10 +144,10 @@ def build_gridsearch_model(nfeatures, ndense_layers, nunits, activation, dropout
         if activation == "relu":
             model.add(Activation('relu'))
         elif activation == "leakyrelu":
-            model.add(Activation('relu'))
+            model.add(LeakyReLU())
         else:
             print("No activation %s found" % (activation))
-    
+
         if dropout == "on":
             model.add(Dropout(0.1))
 
@@ -427,9 +423,7 @@ class NNTrain(object):
                 q2 = RSQ(y_test, ypred_test)
                 mse_test = MSE(y_test, ypred_test)
                 mae_test = MAE(y_test, ypred_test)
-                print("R2: %.4f Train Score: %f Q2: %.4f" % (r2,
-                                                             train_score,
-                                                             q2))
+                print("R2: %.4f  Q2: %.4f" % (r2, q2))
 
                 fo = open("%s" % (gmout), "a")
                 """
@@ -470,13 +464,13 @@ class NNTrain(object):
         """
         # train_keys, test_keys = MDCTrainTestSplit(self.target, 0)
         # train_keys, test_keys = DISCTrainTestSplit(self.target)
-        
+
         ttfn = GetTrainTestFnc()
         if ttfn is None:
             ttfn = TrainTestSplit
         else:
             print("Using custom train/test split function")
-            
+
         train_keys, test_keys = ttfn(list(self.target.keys()),
                                      test_size=0.20,
                                      random_state=random_state)
@@ -555,7 +549,6 @@ class NNTrain(object):
         print("R2: %.4f Q2: %.4f MSE: %.4f" % (RSQ(y_train, yrecalc_train),
                                                RSQ(y_test, ypred_test),
                                                MSE(y_test, ypred_test)))
-        
 
         fo = open("%s_pred.csv" % time.strftime("%Y%m%d%H%M%S"), "w")
         for i in range(len(y_test)):
@@ -589,15 +582,16 @@ class NNTrain(object):
         else:
             # Utilised to store the out path
             mout_path = Path("%s_model" % (time.strftime("%Y%m%d%H%M%S")))
-        
+
         last_model = None
         if mout_path.exists() is True:
-            #Find the last model and restart the calculation from it.
+            # Find the last model and restart the calculation from it.
             p = Path(mout_path).glob('**/*.h5')
             # getonlzfile numbers
             mids = [int(x.stem) for x in p if x.is_file()]
             if len(mids) > 0:
-                last_model = max(mids) # Restart from here...
+                # Restart from here...
+                last_model = max(mids)
             else:
                 last_model = None
         else:
@@ -619,18 +613,18 @@ class NNTrain(object):
         for key in self.target.keys():
             predictions[key] = []
             recalc[key] = []
-        
-        valfn = GetValidationFnc()        
+
+        valfn = GetValidationFnc()
         if valfn is None:
             valfn = RepeatedKFold(list(self.target.keys()),
-                                 n_splits,
-                                 n_repeats,
-                                 random_state=random_state,
-                                 test_size=0.2)
+                                  n_splits,
+                                  n_repeats,
+                                  random_state=random_state,
+                                  test_size=0.2)
         else:
             print("Using custom validation split function")
             valfn = valfn(list(self.target.keys()))
-            
+
         for train_keys, val_keys, test_keys in valfn:
             # Some memory clean-up
             K.clear_session()
@@ -645,7 +639,7 @@ class NNTrain(object):
                                                                             len(val_keys),
                                                                             len(test_keys)))
             model_output = "%s/%d.h5" % (str(mout_path.absolute()), cv_)
-            
+
             if last_model is None:
                 model = None
                 model_ = GetKerasModel()
@@ -656,27 +650,27 @@ class NNTrain(object):
                                                 self.ntargets)
                 else:
                     model = model_(self.nfeatures,
-                                nunits,
-                                ndense_layers)
+                                   nunits,
+                                   ndense_layers)
 
                 print(model.summary())
                 dname = cvout.replace(".csv", "")
                 b = batch_size_
                 log_dir_ = ("./logs/cv%d_%s_#b%d_#e%d_#u%d_#dl%d_" % (cv_,
-                                                                    dname,
-                                                                    b,
-                                                                    num_epochs,
-                                                                    nunits,
-                                                                    ndense_layers))
+                                                                      dname,
+                                                                      b,
+                                                                      num_epochs,
+                                                                      nunits,
+                                                                      ndense_layers))
                 log_dir_ += time.strftime("%Y%m%d%H%M%S")
                 callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                        histogram_freq=0,
-                                        write_graph=False,
-                                        write_images=False),
-                            ModelCheckpoint(model_output,
-                                            monitor='val_loss',
-                                            verbose=0,
-                                            save_best_only=True)]
+                                          histogram_freq=0,
+                                          write_graph=False,
+                                          write_images=False),
+                              ModelCheckpoint(model_output,
+                                              monitor='val_loss',
+                                              verbose=0,
+                                              save_best_only=True)]
 
                 model.fit_generator(train_generator,
                                     steps_per_epoch=train_steps_per_epoch,
@@ -696,26 +690,28 @@ class NNTrain(object):
             y_true_recalc = []
             for key in train_keys:
                 row = np.array([self.X_raw[key]])
-                p = model_.predict(row)[0] # we process compound by compound
+                # we process compound by compound
+                p = model_.predict(row)[0]
                 y_recalc.append(p)
                 y_true_recalc.append(self.target[key])
                 recalc[key].append(p)
 
             ypred_test = model_.predict(x_test)
             ypred_val = model_.predict(x_val)
-            
+
             r2 = RSQ(y_true_recalc, y_recalc)
             q2 = RSQ(y_test, ypred_test)
             tr2 = RSQ(y_val, ypred_val)
-            print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2, q2, tr2))
-            
+            print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2,
+                                                                    q2,
+                                                                    tr2))
 
             # Store validation prediction
             for i in range(len(ypred_test)):
                 predictions[test_keys[i]].append(list(ypred_test[i]))
 
             # Store the cross validation model
-            #if mout_path is not None:
+            # if mout_path is not None:
             #    model.save("%s/%d.h5" % (str(mout_path.absolute()), cv_))
 
             if fimpfile is not None:
@@ -725,9 +721,9 @@ class NNTrain(object):
                     feat_imp[key]['mae'].extend(fires[key]['mae'])
                     feat_imp[key]['mse'].extend(fires[key]['mse'])
             cv_ += 1
-        
+
         WriteCrossValidationOutput(cvout, self.target, predictions, recalc)
-       
+
         if fimpfile is not None:
             WriteFeatureImportance(feat_imp, fimpfile)
 
@@ -762,6 +758,8 @@ def main():
                         help='Feature Importance file')
     parser.add_argument('--verbose', default=0, type=int,
                         help='Set verbosity 0, 1, 2')
+    parser.add_argument('--mtype', default=0, type=int,
+                        help='Regression: 0, classification: 1')
 
     args = parser.parse_args(argv[1:])
     if args.xmatrix is None or args.ytarget is None or args.batch_size is None:
