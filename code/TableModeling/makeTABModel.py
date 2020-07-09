@@ -192,30 +192,67 @@ class NNTrain(object):
             i += 1
         return batch_features, batch_target
 
-    def makeMatrix(self, keys, nobjs, batch_features, batch_target):
+    def makeMatrix(self,
+                   keys,
+                   nobjs,
+                   batch_features,
+                   batch_target,
+                   batch_mode=0):
         random.seed(datetime.datetime.now().microsecond)
         # random.shuffle(keys)
-        for i in range(nobjs):
-            # key = keys[i]
-            key = keys[random.randint(0, len(keys)-1)]
-            try:
-                t = self.target[key]
-                x = self.X_raw[key]
-                batch_target[i] = np.copy(t)
-                batch_features[i] = np.copy(x)
-            except KeyError:
-                print("Molecule %s not found" % (key))
+        if batch_mode == 0:
+            for i in range(nobjs):
+                key = keys[random.randint(0, len(keys)-1)]
+                try:
+                    t = self.target[key]
+                    x = self.X_raw[key]
+                    batch_target[i] = np.copy(t)
+                    batch_features[i] = np.copy(x)
+                except KeyError:
+                    print("Molecule %s not found" % (key))
+        else:
+            btask = [0 for i in range(self.ntargets)]
+            for i in range(nobjs):
+                key = None
+                key_size = len(keys)-1
+                j = None
+                if sum(btask) == self.ntargets:
+                    for i in range(len(btask)):
+                        btask[i] = 0
+                    j = random.randint(0, self.ntargets-1)
+                else:
+                    j = btask.index(min(btask))
+        
+                while True:
+                    key = keys[random.randint(0, key_size)]
+                    # Check for missing values. In case of, continue!
+                    if int(fabs(self.target[key][j]-9999.)) == 0:
+                        continue
+                    else:
+                        break
+                try:
+                    t = self.target[key]
+                    x = self.X_raw[key]
+                    batch_target[i] = np.copy(t)
+                    batch_features[i] = np.copy(x)
+                except KeyError:
+                    print("Molecule %s not found" % (key))
         return 0
         # return np.array(batch_features), np.array(batch_target)
 
-    def DataGenerator(self, keys, batch_size):
+    def DataGenerator(self, keys, batch_size, batch_mode=0):
+        """
+        batch_mode=0 -> Random batch
+        batch_mode=1 -> Balanced batch
+        """
         self.batch_features = np.zeros((batch_size, self.nfeatures))
         self.batch_target = np.zeros((batch_size, self.ntargets))
         while True:
             self.makeMatrix(keys,
                             batch_size,
                             self.batch_features,
-                            self.batch_target)
+                            self.batch_target,
+                            batch_mode)
             yield self.batch_features, self.batch_target
 
     def makeMatrixiFromiTo(self,
@@ -454,6 +491,7 @@ class NNTrain(object):
 
     def simplerun(self,
                   batch_size_,
+                  batch_mode_,
                   num_epochs,
                   ndense_layers,
                   nunits,
@@ -494,10 +532,12 @@ class NNTrain(object):
                                ndense_layers)
         print(model.summary())
 
-        # train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
-        # train_generator = self.DataGenerator(train_keys, batch_size_)
+        train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
+        train_generator = self.DataGenerator(train_keys,
+                                             batch_size_,
+                                             batch_mode_)
 
-        x_train, y_train = self.GenData(train_keys)
+        #x_train, y_train = self.GenData(train_keys)
 
         # This is unstable
         # test_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
@@ -516,7 +556,7 @@ class NNTrain(object):
                                   histogram_freq=0,
                                   write_graph=False,
                                   write_images=False)]
-
+        """
         model.fit(x_train, y_train,
                   epochs=num_epochs,
                   batch_size=b,
@@ -537,14 +577,13 @@ class NNTrain(object):
                             # validation_steps=test_steps_per_epoch,
                             callbacks=callbacks_)
 
-
         yrecalc_train = []
         y_train = []
         for key in train_keys:
             a = np.array([self.X_raw[key]])
             yrecalc_train.extend(model.predict(a))
             y_train.append(self.target[key])
-        """
+        
         ypred_test = model.predict(x_test)
         print("R2: %.4f Q2: %.4f MSE: %.4f" % (RSQ(y_train, yrecalc_train),
                                                RSQ(y_test, ypred_test),
@@ -563,6 +602,7 @@ class NNTrain(object):
 
     def runcv(self,
               batch_size_,
+              batch_mode_,
               num_epochs,
               ndense_layers,
               nunits,
@@ -629,7 +669,9 @@ class NNTrain(object):
             # Some memory clean-up
             K.clear_session()
             train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
-            train_generator = self.DataGenerator(train_keys, batch_size_)
+            train_generator = self.DataGenerator(train_keys,
+                                                 batch_size_,
+                                                 batch_mode_)
             # x_train, y_train = self.GenData(train_keys)
             # test_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
             # test_generator = self.DataGenerator(test_keys, batch_size_)
@@ -738,6 +780,8 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--batch_size', default=None, type=int,
                         help='Batch size')
+    parser.add_argument('--batch_mode', default=0, type=int,
+                        help='Batch mode: 0=random; 1=balanced')
     parser.add_argument('--random_state', default=123458976, type=int,
                         help='Random state')
     parser.add_argument('--gsout', default=None, type=str,
@@ -775,6 +819,7 @@ def main():
         nn.verbose = args.verbose
         if args.cvout is None and args.gsout is None:
             nn.simplerun(args.batch_size,
+                         args.batch_mode,
                          args.epochs,
                          args.ndense_layers,
                          args.nunits,
@@ -782,6 +827,7 @@ def main():
                          args.mout)
         elif args.cvout is not None and args.gsout is None:
             nn.runcv(args.batch_size,
+                     args.batch_mode,
                      args.epochs,
                      args.ndense_layers,
                      args.nunits,
