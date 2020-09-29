@@ -599,7 +599,7 @@ class NNTrain(object):
     
         ytest_pred = []
         ytest_true = []
-        for key in train_keys:
+        for key in test_keys:
             ytest_pred.append(y_pred_test[key])
             ytest_true.append(self.target[key])
     
