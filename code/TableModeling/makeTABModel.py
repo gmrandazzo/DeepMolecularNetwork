@@ -226,7 +226,7 @@ class NNTrain(object):
                 while True:
                     key = keys[random.randint(0, key_size)]
                     # Check for missing values. In case of, continue!
-                    if int(fabs(self.target[key][j]-9999.)) == 0:
+                    if int(np.fabs(self.target[key][j]-9999.)) == 0:
                         continue
                     else:
                         break
@@ -285,7 +285,18 @@ class NNTrain(object):
                                     i+batch_size,
                                     batch_features, batch_target)
             yield batch_features, batch_target
-
+    
+    def makePrediction(self, model, keys):
+        predictions = {}
+        for key in train_keys:
+            a = np.array([self.X_raw[key]])
+            predictions[key] = list(model.predict(a))
+            
+        if self.scaling is not None:
+            return self.scaling.revert(predictions)
+        else:
+            return predictions
+        
     # Public Methods
     def GridSearch(self,
                    batch_size_,
@@ -577,23 +588,30 @@ class NNTrain(object):
                             # validation_steps=test_steps_per_epoch,
                             callbacks=callbacks_)
 
-        yrecalc_train = []
-        y_train = []
+        y_recalc_train = self.makePrediction(model, train_keys)
+        y_pred_test = self.makePrediction(model, test_keys)
+       
+        ytrain_recalc = []
+        ytrain_true = []
         for key in train_keys:
-            a = np.array([self.X_raw[key]])
-            yrecalc_train.extend(model.predict(a))
-            y_train.append(self.target[key])
-        
-        ypred_test = model.predict(x_test)
-        print("R2: %.4f Q2: %.4f MSE: %.4f" % (RSQ(y_train, yrecalc_train),
-                                               RSQ(y_test, ypred_test),
-                                               MSE(y_test, ypred_test)))
+            ytrain_recalc.append(y_recalc_train[key])
+            ytrain_true.append(self.target[key])
+    
+        ytest_pred = []
+        ytest_true = []
+        for key in train_keys:
+            ytest_pred.append(y_pred_test[key])
+            ytest_true.append(self.target[key])
+    
+        print("R2: %.4f Q2: %.4f MSE: %.4f" % (RSQ(ytrain_true, ytrain_recalc),
+                                               RSQ(ytest_pred, ytest_true),
+                                               MSE(ytest_pred, ytest_true)))
 
         fo = open("%s_pred.csv" % time.strftime("%Y%m%d%H%M%S"), "w")
-        for i in range(len(y_test)):
+        for i in range(len(ytest_true)):
             fo.write("%s" % (test_keys[i]))
-            for j in range(len(y_test[i])):
-                fo.write(",%f,%f" % (y_test[i][j], ypred_test[i][j]))
+            for j in range(len(ytest_true[i])):
+                fo.write(",%f,%f" % (ytest_true[i][j], ytest_pred[i][j]))
             fo.write("\n")
         fo.close()
 
@@ -728,29 +746,38 @@ class NNTrain(object):
 
             model_ = GetLoadModelFnc()(model_output)
 
+
+            y_recalc_train = self.makePrediction(model_, train_keys)
+            y_pred_val = self.makePrediction(model_, val_keys)
+            y_pred_test = self.makePrediction(model_, test_keys)
+           
             y_recalc = []
             y_true_recalc = []
             for key in train_keys:
-                row = np.array([self.X_raw[key]])
-                # we process compound by compound
-                p = model_.predict(row)[0]
-                y_recalc.append(p)
+                y_recalc.append(y_recalc_train[key])
                 y_true_recalc.append(self.target[key])
-                recalc[key].append(p)
+                recalc[key].append(y_recalc_train[key])
 
-            ypred_test = model_.predict(x_test)
-            ypred_val = model_.predict(x_val)
+            ypred_val = []
+            ytrue_val = []
+            for key in val_keys:
+                ypred_val.append(y_pred_val[key])
+                ytrue_val.append(self.target[key])
+            
+            ypred_test = []
+            ytrue_test = []
+            for key in test_keys:
+                ypred_test.append(y_pred_test[key])
+                ytrue_test.append(self.target[key])
+                # Store validation prediction
+                predictions[key].append(y_pred_test[key])
 
             r2 = RSQ(y_true_recalc, y_recalc)
-            q2 = RSQ(y_test, ypred_test)
-            tr2 = RSQ(y_val, ypred_val)
+            q2 = RSQ(ytrue_test, ypred_test)
+            tr2 = RSQ(ytrue_val, ypred_val)
             print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2,
                                                                     q2,
                                                                     tr2))
-
-            # Store validation prediction
-            for i in range(len(ypred_test)):
-                predictions[test_keys[i]].append(list(ypred_test[i]))
 
             # Store the cross validation model
             # if mout_path is not None:
