@@ -162,9 +162,6 @@ def LoadDataset(fcsv):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--mtype',
-                   default=None, type=str,
-                   help='model type: reg or class')
     p.add_argument('--csv', default=None, type=str, help='csv dataset table')
     p.add_argument('--imgpath', default=None, type=str, help='image path')
     p.add_argument('--mout', default=None, type=str, help='model output')
@@ -174,10 +171,7 @@ def main():
     else:
         train_generator = None
         validation_generator = None
-        if args.mtype == "reg":
-
-        elif args.mtype == "class":
-            train_dir, validation_dir = LoadDemo()
+        # train_dir, validation_dir = LoadDemo()
             train_datagen = ImageDataGenerator(rescale=1./255,
                                                rotation_range=40,
                                                width_shift_range=0.2,

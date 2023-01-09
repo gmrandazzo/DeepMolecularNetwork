@@ -10,7 +10,7 @@ import sys
 import subprocess
 import multiprocessing
 
-mol2pqrbin = "/home/marco/MolDesc/build/src/tests/testMol2ToPQR"
+mol2pqrbin = "/home/marco/MolecularFramework_build/src/tests/testMol2ToPQR"
 
 def Mol2PQR(mol2):
   pqr = mol2.replace(".mol2", ".pqr")

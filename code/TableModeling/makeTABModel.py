@@ -12,6 +12,7 @@ import argparse
 from pathlib import Path
 import numpy as np
 import random
+import time
 
 import tensorflow as tf
 if int(tf.__version__[0]) > 1:
@@ -288,14 +289,16 @@ class NNTrain(object):
     
     def makePrediction(self, model, keys):
         predictions = {}
-        for key in train_keys:
-            a = np.array([self.X_raw[key]])
-            predictions[key] = list(model.predict(a))
-            
-        if self.scaling is not None:
-            return self.scaling.revert(predictions)
-        else:
-            return predictions
+        x = []
+        for key in keys:
+            x.append(self.X_raw[key])
+        x = np.array(x)
+        xp = model.predict(x)
+        for i in range(len(keys)):
+            key = keys[i]
+            predictions[key] = xp[i]
+
+        return predictions
         
     # Public Methods
     def GridSearch(self,

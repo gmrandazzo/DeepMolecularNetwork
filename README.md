@@ -1,6 +1,6 @@
 # DeepMolecularNetwork
 
-DeepMolecularNetwork
+![Page views](https://visitor-badge.glitch.me/badge?page_id=gmrandazzo.DeepMolecularNetwork)
 
 A tool to develop QSAR/QSPR Deep machine learning models.
 DeepMolecularNetwork provide a framework to build models with:
