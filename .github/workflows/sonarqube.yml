@@ -3,9 +3,7 @@ name: sonarqube
 on:
   push:
     branches:
-      - main
-      - develop_*
-
+      - master
 
 jobs:
   build:
