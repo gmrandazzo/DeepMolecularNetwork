@@ -18,22 +18,42 @@ from __future__ import (
     unicode_literals
 )
 import six
-from keras.models import Model
-from keras.layers import (
-    Input,
-    Activation,
-    Dense,
-    Flatten
-)
-from keras.layers.convolutional import (
-    Conv3D,
-    AveragePooling3D,
-    MaxPooling3D
-)
-from keras.layers.merge import add
-from keras.layers.normalization import BatchNormalization
-from keras.regularizers import l2
-from keras import backend as K
+
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.regularizers import l2
+    from tensorflow.keras.layers import BatchNormalization
+    from tensorflow.keras.layers import add
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import (
+        Input,
+        Activation,
+        Dense,
+        Flatten
+    )
+    from tensorflow.keras.layers import (
+        Conv3D,
+        AveragePooling3D,
+        MaxPooling3D
+    )
+else:
+    from keras.models import Model
+    from keras.layers import (
+        Input,
+        Activation,
+        Dense,
+        Flatten
+    )
+    from keras.layers.convolutional import (
+        Conv3D,
+        AveragePooling3D,
+        MaxPooling3D
+    )
+    from keras.layers.merge import add
+    from keras.layers.normalization import BatchNormalization
+    from keras.regularizers import l2
+    from keras import backend as K
 
 
 def _bn_relu(input):

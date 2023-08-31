@@ -714,7 +714,8 @@ class NNTrain(object):
                 else:
                     model = model_(self.nfeatures,
                                    nunits,
-                                   ndense_layers)
+                                   ndense_layers,
+                                   self.ntargets)
 
                 print(model.summary())
                 dname = cvout.replace(".csv", "")

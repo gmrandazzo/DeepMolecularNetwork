@@ -19,7 +19,11 @@ import time
 # from tensorflow import set_random_seed
 from Voxel import LoadVoxelDatabase
 from datetime import datetime
-from keras import backend as K
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+else:
+    from keras import backend as K
 import os
 
 # Some memory clean-up

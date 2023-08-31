@@ -6,12 +6,72 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-import keras
-from keras import backend as K
-from keras.models import Model, Input, Sequential
-from keras.layers import Activation, AveragePooling3D, BatchNormalization, Conv3D, Cropping3D, Dense, Dropout, Flatten, LeakyReLU, MaxPooling3D, Conv1D, MaxPooling1D, Concatenate
-from keras.regularizers import l2
-from keras import optimizers
+
+import tensorflow as tf
+if int(tf.__version__[0]) > 1:
+    from tensorflow.keras import backend as K
+    from tensorflow.keras.callbacks import(
+        ModelCheckpoint,
+        TensorBoard
+    )
+
+    from tensorflow.keras.models import(
+        Model,
+        Sequential
+    )
+
+    from tensorflow.keras.layers import(
+        add,
+        Input,
+        Dense,
+        Dropout,
+        BatchNormalization,
+        Activation,
+        LeakyReLU,
+        Activation,
+        AveragePooling3D,
+        BatchNormalization,
+        Conv3D,
+        Cropping3D,
+        Flatten,
+        MaxPooling3D,
+        Conv1D,
+        MaxPooling1D,
+        Concatenate
+    )
+    from tensorflow.keras import optimizers
+    from tensorflow.keras.layers import Layer
+else:
+    from keras import backend as K
+    from keras.callbacks import ModelCheckpoint
+    from keras.callbacks import TensorBoard
+    import keras
+    from keras import backend as K
+    from keras.models import(
+        Model,
+        Input,
+        Sequential
+    )
+    from keras.layers import(
+        Dense,
+        Dropout,
+        BatchNormalization,
+        Activation,
+        LeakyReLU,
+        Activation,
+        AveragePooling3D,
+        BatchNormalization,
+        Conv3D,
+        Cropping3D,
+        Flatten,
+        MaxPooling3D,
+        Conv1D,
+        MaxPooling1D,
+        Concatenate
+    )
+    from keras.regularizers import l2
+    from keras import optimizers
+    from keras.engine.topology import Layer
 
 from resnet3d import *
 
@@ -231,7 +291,6 @@ def build_fcn_model(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters)
     return model
 
 
-from keras.engine.topology import Layer
 class MyLayer(Layer):
     def __init__(self, output_dim, **kwargs):
         self.output_dim = output_dim
