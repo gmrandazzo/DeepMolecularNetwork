@@ -53,8 +53,7 @@ from sklearn.model_selection import ParameterGrid
 import time
 from math import ceil
 import datetime
-from dnnresnet import dnn_resnet_layer
-
+#from dnnresnet import dnn_resnet_layer
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
@@ -97,9 +96,9 @@ def example_build_model(nfeatures, nunits, ndense_layers, ntargets):
                   metrics=['mse', 'mae'])
     return model
 
-
+"""
 def build_dnn_resnet_model(nfeatures, nunits, ndense_layers):
-    """ResNet Version 1 Model builder
+    ResNet Version 1 Model builder
 
     # Arguments
         input_shape (tensor): shape of input tensor
@@ -108,7 +107,7 @@ def build_dnn_resnet_model(nfeatures, nunits, ndense_layers):
 
     # Returns
         model (Model): Keras model instance
-    """
+    
 
     inputs = Input(shape=(nfeatures,))
     x = BatchNormalization()(inputs)
@@ -130,7 +129,7 @@ def build_dnn_resnet_model(nfeatures, nunits, ndense_layers):
                   optimizer=optimizers.Adam(),
                   metrics=['mse', 'mae'])
     return model
-
+"""
 
 def build_gridsearch_model(nfeatures,
                            ndense_layers,
