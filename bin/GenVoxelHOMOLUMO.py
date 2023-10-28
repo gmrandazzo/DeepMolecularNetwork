@@ -116,8 +116,8 @@ def GetCoordInfo(mol2file):
             break
         else:
             if getatomcc is True:
-                v = str.split(line.strip(), " ")
-                v = filter(None, v)
+                v = list(str.split(line.strip(), " "))
+                v = list(filter(None, v))
                 if len(v) == 9:
                     # 1 au = 0.529177249 angstrom
                     x = float(v[2])/0.529177249

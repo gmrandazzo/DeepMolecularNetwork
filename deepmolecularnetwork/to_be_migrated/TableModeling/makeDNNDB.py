@@ -37,7 +37,7 @@ def main():
         names = []
         for line in fi:
             if "Objects" in line or "Molec" in line:
-                header.extend()
+                header.extend(str.split(line.strip(), ",")[0])
             else:
                 v = str.split(line.strip(), ",")
                 mx.append(v[1:])

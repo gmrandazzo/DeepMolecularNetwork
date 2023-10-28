@@ -124,7 +124,7 @@ class Voxel3DModel(object):
                     keys.append(key)
                 else:
                     continue
-                
+  
     def makeDataset(self, keys, nrotations):
         """
         Create a dataset giving:
@@ -390,7 +390,7 @@ def cv(db,
        cvout=None,
        fcvgroup=None,
        featimp_out=None,
-       y_recalc=False,
+       y_recalc=None,
        mout=None):
     
     # Load the dataset

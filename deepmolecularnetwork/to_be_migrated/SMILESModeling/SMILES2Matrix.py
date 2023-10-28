@@ -117,7 +117,7 @@ class SMILES2MX(object):
                 i = d[psmi[j]]
                 m[i][j] = 1
             else:
-                print("Error: char %s not found!" % ())
+                print("Error: char %s not found!" % (psmi[j]))
         return m
 
 

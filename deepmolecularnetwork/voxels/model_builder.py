@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) 2018-2019 gmrandazzo@gmail.com
-# This file is part of DeepMolecularNetwork.
-# You can use,modify, and distribute it under
-# the terms of the GNU General Public Licenze, version 3.
-# See the file LICENSE for details
-
+"""
+model_builder
+(c) 2018-2023 gmrandazzo@gmail.com
+This file is part of DeepMolecularNetwork.
+You can use,modify, and distribute it under
+the terms of the GNU General Public Licenze, version 3.
+See the file LICENSE for details
+"""
 
 import tensorflow as tf
 if int(tf.__version__[0]) > 1:

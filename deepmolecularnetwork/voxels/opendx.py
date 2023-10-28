@@ -1,54 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) 2018-2019 gmrandazzo@gmail.com
-# This file is part of DeepMolecularNetwork.
-# You can use,modify, and distribute it under
-# the terms of the GNU General Public Licenze, version 3.
-# See the file LICENSE for details
+"""
+opendx file read/write
+(c) 2018-2023 gmrandazzo@gmail.com
+This file is part of DeepMolecularNetwork.
+You can use,modify, and distribute it under
+the terms of the GNU General Public Licenze, version 3.
+See the file LICENSE for details
+"""
 
 import numpy as np
-
-"""
-def readOpenDX(ifile):
-  voxel = None
-  origin = None
-  delta = []
-  f = open(ifile, "r")
-  c = 1
-  values = []
-  grid_sizes = []
-  for line in f:
-    if "gridpositions counts" in line:
-      v = str.split(line.strip(), " ")
-      grid_size = [int(v[5]), int(v[6]), int(v[7])]
-      voxel = np.zeros(grid_size)
-    elif "origin" in line:
-      v = str.split(line.strip(), " ")
-      origin = [float(v[1]), float(v[2]), float(v[3])]
-    elif "delta" in line:
-      v = str.split(line.strip(), " ")
-      delta.append(float(v[c]))
-      c += 1
-    else:
-      if 'attribute "dep" string positions' in line.strip():
-          line = str.split(line.strip(), "attribute")[0]
-      else:
-          line = line.strip()
-      v = str.split(line, " ")
-      if len(v) == 3 or len(v) == 2 or len(v) == 1:
-        for item in v:
-          values.append(float(item))
-      else:
-        continue
-  c = 0
-  for i in range(grid_size[0]):
-    for j in range(grid_size[1]):
-      for k in range(grid_size[2]):
-        voxel[i][j][k] = values[c]
-        c += 1
-
-  return voxel, origin, delta
-"""
 
 def nsplit(line, sep):
     v = str.split(line.strip(), sep)

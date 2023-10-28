@@ -1,22 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) 2018-2019 gmrandazzo@gmail.com
-# This file is part of DeepMolecularNetwork.
-# You can use,modify, and distribute it under
-# the terms of the GNU General Public Licenze, version 3.
-# See the file LICENSE for details
+"""
+opendx file read/write
+(c) 2018-2023 gmrandazzo@gmail.com
+This file is part of DeepMolecularNetwork.
+You can use,modify, and distribute it under
+the terms of the GNU General Public Licenze, version 3.
+See the file LICENSE for details
+"""
 
-import tensorflow as tf
-if int(tf.__version__[0]) > 1:
-    from tensorflow.keras import backend as K
-    from tensorflow.keras.callbacks import TensorBoard
-    from tensorflow.keras.callbacks import ModelCheckpoint
-    from tensorflow.keras.utils import plot_model
-else:
-    from keras import backend as K
-    from keras.callbacks import TensorBoard
-    from keras.callbacks import ModelCheckpoint
-    from keras.utils import plot_model
+from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.utils import plot_model
 
 import argparse
 from model_builder import *
@@ -27,28 +21,38 @@ import sys
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 import time
-from Voxel import LoadVoxelDatabase
+from voxels import LoadVoxelDatabase
 from datetime import datetime
 import os
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append("%s/../Base" % (dir_path))
-# from FeatureImportance import FeatureImportance, WriteFeatureImportance
-from modelhelpers import GetKerasModel
-from modelhelpers import GetLoadModelFnc
-from modelhelpers import GetTrainTestFnc
+import logging
 
-from dmnnio import ReadDescriptors
-from dmnnio import ReadTarget
-from dmnnio import WriteCrossValidationOutput
-from modelvalidation import TrainTestSplit
-from modelvalidation import RepeatedKFold
-from modelvalidation import CVGroupRead
-from modelvalidation import StaticGroupCV
-from modelvalidation import RepeatedStratifiedCV
+from deepmolecularnetwork.utility.modelhelpers import (
+    GetKerasModel,
+    GetLoadModelFnc,
+    GetTrainTestFnc
+)
 
+from deepmolecularnetwork.utility.io import (
+    ReadDescriptors,
+    ReadTarget,
+    WriteCrossValidationOutput
+)
+from deepmolecularnetwork.utility.modelvalidation import (
+    TrainTestSplit,
+    RepeatedKFold,
+    CVGroupRead,
+    StaticGroupCV,
+    RepeatedStratifiedCV
+)
 
-class Voxel3DModel(object):
-    def __init__(self, csv_target, db, csv_descriptors=None):
+class Voxels3DModel:
+    def __init__(self,
+                 csv_target: str,
+                 db: str,
+                 csv_descriptors: str = None):
+        """
+        init function
+        """
         self.voxels = LoadVoxelDatabase(db)
         print("Max Conformations %d " % (len(list(self.voxels.values())[0])))
         if csv_descriptors is not None:
@@ -124,7 +128,7 @@ class Voxel3DModel(object):
                     keys.append(key)
                 else:
                     continue
-                
+  
     def makeDataset(self, keys, nrotations):
         """
         Create a dataset giving:
@@ -390,7 +394,7 @@ def cv(db,
        cvout=None,
        fcvgroup=None,
        featimp_out=None,
-       y_recalc=False,
+       y_recalc=None,
        mout=None):
     
     # Load the dataset
@@ -657,153 +661,3 @@ def cv(db,
             continue
     return ycvp
 
-
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument('--target_csv',
-                   default=None,
-                   type=str,
-                   help='Voxel database')
-    p.add_argument('--desc_csv',
-                   default=None,
-                   type=str,
-                   help='Molecule descriptors')
-    p.add_argument('--db',
-                   default=None,
-                   type=str,
-                   help='DX path')
-    p.add_argument('--regression',
-                   default=True,
-                   type=bool,
-                   help='regression model type')
-    p.add_argument('--classification',
-                   default=False,
-                   type=bool,
-                   help='classification model type')
-    p.add_argument('--mout',
-                   default=None,
-                   type=str,
-                   help='model output')
-    p.add_argument('--epochs',
-                   default=100,
-                   type=int,
-                   help='Number of epochs')
-    p.add_argument('--random_state',
-                   default=123458976,
-                   type=int,
-                   help='Number of epochs')
-    p.add_argument('--n_rot_train',
-                   default=10,
-                   type=int,
-                   help='Number of voxel rotation multiplication for the train. (batch_size = n_rot_train*n_molecules)')
-    p.add_argument('--train_steps_per_epoch',
-                   default=500,
-                   type=int,
-                   help='How many times the voxel data generator with its augmentation is called for the training set)')
-    p.add_argument('--n_rot_validation',
-                   default=5,
-                   type=int,
-                   help='Number of voxel rotation for the validation test')
-    p.add_argument('--val_steps_per_epoch',
-                   default=100,
-                   type=int,
-                   help='How many times the voxel data generator with its augmentation is called for the validation set)')
-    p.add_argument('--nlayers',
-                   default=10,
-                   type=int,
-                   help='Number of dense NN layers')
-    p.add_argument('--nunits',
-                   default=64,
-                   type=int,
-                   help='Number of units in DNN')
-    p.add_argument('--nfilters',
-                   default=16,
-                   type=int,
-                   help='Number of filters for Conv3d')
-    p.add_argument('--cvout',
-                   default=None,
-                   type=str,
-                   help='Run Cross Validation')
-    p.add_argument('--n_splits',
-                   default=5,
-                   type=int,
-                   help='Number of Cross Validation splits')
-    p.add_argument('--n_repeats',
-                   default=20,
-                   type=int,
-                   help='Number of Cross Validation splits')
-    p.add_argument('--cvgroupfile',
-                   default=None,
-                   type=str,
-                   help='Static cross-validation group file')
-    p.add_argument('--tid',
-                   default=None,
-                   type=int,
-                   help='Test Group to use in simple run for model evaluation')
-    p.add_argument('--featimp_out',
-                   default=None,
-                   type=str,
-                   help='Feature Importance output')
-    args = p.parse_args(sys.argv[1:])
-
-    if args.target_csv is None and args.db is None:
-        print("\nUsage:")
-        print("%s --csv [CSV database]" % (sys.argv[0]))
-        print("--db [Voxel Database path]")
-        print("--mout [keras model out]")
-        print("--epochs [default 100]")
-        print("--n_rot_train [default 1]")
-        print("--train_steps_per_epoch [default 500]")
-        print("--n_rot_validation [default 1]")
-        print("--val_steps_per_epoch [default 100]")
-        print("--nlayers [default 10]")
-        print("--nunits [default 64]")
-        print("--mout [default None]")
-        print("--cvout [default None]")
-        print("--n_splits [default None]")
-        print("--n_repeats [default None]")
-        print("\nUsage simple run test: make3DCNNmodel.py --db Gasteiger_Database_g50_s25/ --target_csv TorusDiolSFC.csv  --epochs 1000 --n_rot_train 4 --train_steps_per_epoch 25 --n_rot_validation 1 --val_steps_per_epoch 5 --nunits 32  --nfilters 8")
-        print("\nUsage model run test example: python ../Code/make3DCNNmodel.py --db OptimisedConformation/--target_csv LogKwActivity.csv  --n_rot_validation 2 --n_rot_train 4 --train_steps_per_epoch 25 --val_steps_per_epoch 5  --epochs 30 --nlayers 13 --mout logKwModel_rt50_rv100_e30_dl13 --cvgroupfile cvgroup.csv --tid 6")
-        print("\nUsage model validation example: python ../Code/make3DCNNmodel.py --db VDatabase_g20_s20_r500 --target_csv LogKwActivity.csv --n_rot_validation 100 --n_rot_train 50 --epochs 30 --nlayers 13 --cvout LogKwValidation.csv --n_repeats 3\n")
-    else:
-        if args.cvout is not None:
-            cv(args.db,
-               args.target_csv,
-               args.desc_csv,
-               args.n_splits,
-               args.n_repeats,
-               args.epochs,
-               args.n_rot_train,
-               args.train_steps_per_epoch,
-               args.n_rot_validation,
-               args.val_steps_per_epoch,
-               args.nlayers,
-               args.nunits,
-               args.nfilters,
-               args.random_state,
-               args.cvout,
-               args.cvgroupfile,
-               args.featimp_out,
-               False,
-               args.mout)
-        else:
-            simplerun(args.db,
-                      args.target_csv,
-                      args.desc_csv,
-                      args.epochs,
-                      args.n_rot_train,
-                      args.train_steps_per_epoch,
-                      args.n_rot_validation,
-                      args.val_steps_per_epoch,
-                      args.nlayers,
-                      args.nunits,
-                      args.nfilters,
-                      args.random_state,
-                      args.mout,
-                      args.cvgroupfile,
-                      args.tid)
-    return 0
-
-
-if __name__ in "__main__":
-    main()

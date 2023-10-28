@@ -68,21 +68,19 @@ import numpy as np
 
 from OHEDatabase import OHEDatabase
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
-from modelhelpers import GetTrainTestFnc
-from modelhelpers import GetKerasModel
-from modelhelpers import GetLoadModelFnc
-from modelhelpers import LoadKerasModels
+from deepmolecularnetwork.utility.modelhelpers import GetTrainTestFnc
+from deepmolecularnetwork.utility.modelhelpers import GetKerasModel
+from deepmolecularnetwork.utility.modelhelpers import GetLoadModelFnc
+from deepmolecularnetwork.utility.modelhelpers import LoadKerasModels
 
 from modelvalidation import MDCTrainTestSplit
 from modelvalidation import TrainTestSplit
 from modelvalidation import RepeatedKFold
 
-from dmnnio import ReadDescriptors
-from dmnnio import ReadTarget
-from dmnnio import WriteCrossValidationOutput
+from deepmolecularnetwork.utility.io import ReadDescriptors
+from deepmolecularnetwork.utility.io import ReadTarget
+from deepmolecularnetwork.utility.io import WriteCrossValidationOutput
 
 from numpy_loss_functions import LOGMAE
 from keras_additional_loss_functions import rmse
