@@ -37,14 +37,19 @@ jobs:
           pre-commit run --all-files --show-diff-on-failure
 
   pytest:
-    name: Test (${{ matrix.keras-target }})
+    name: Test (Python ${{ matrix.python-version }} - ${{ matrix.keras-target }})
     needs: pre-commit
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11"]
-        keras-target: ["keras2", "keras3"]
+        include:
+          - python-version: "3.11"
+            keras-target: "keras2"
+          - python-version: "3.11"
+            keras-target: "keras3"
+          - python-version: "3.13"
+            keras-target: "keras3"
 
     steps:
       - name: Checkout repository
@@ -68,6 +73,8 @@ jobs:
   build:
     name: Build Wheel & Source Distribution
     needs: pytest
+    # Build package only on tagged releases (e.g., v0.2.0) or manual workflow dispatch
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -76,7 +83,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install build tools
         run: |

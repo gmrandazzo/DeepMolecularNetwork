@@ -38,7 +38,6 @@ from deepmolecularnetwork.utility.modelhelpers import (  # noqa: E402
     get_keras_model,
     get_load_model_fnc,
 )
-from deepmolecularnetwork.framework import K  # noqa: E402
 
 
 class TestMoleculeUtility:

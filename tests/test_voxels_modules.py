@@ -19,7 +19,6 @@ from deepmolecularnetwork.voxels.voxels import (
 )
 from deepmolecularnetwork.voxels.resnet3d import Resnet3DBuilder
 from deepmolecularnetwork.voxels.model_builder import rmse, rsquared
-from deepmolecularnetwork.framework import K
 
 
 class TestOpenDXAndVoxelObject:
