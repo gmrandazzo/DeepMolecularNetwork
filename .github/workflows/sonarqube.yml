@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - develop
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,8 +30,32 @@ jobs:
           coverage run -m pytest tests/
           coverage xml
 
+      - name: Sanitize SonarQube Secrets
+        env:
+          RAW_SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          RAW_SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarqube.gmrandazzo.com' }}
+        run: |
+          python -c '
+          import os
+          raw_token = os.environ.get("RAW_SONAR_TOKEN", "")
+          raw_host = os.environ.get("RAW_SONAR_HOST_URL", "https://sonarqube.gmrandazzo.com")
+          clean_token = "".join(raw_token.split())
+          clean_host = "".join(raw_host.split())
+          if clean_token:
+              print(f"::add-mask::{clean_token}")
+          github_env = os.environ.get("GITHUB_ENV")
+          if github_env:
+              with open(github_env, "a") as f:
+                  f.write(f"SONAR_TOKEN={clean_token}\n")
+                  f.write(f"SONAR_HOST_URL={clean_host}\n")
+          '
+
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            -Dsonar.token=${{ env.SONAR_TOKEN }}
+            -Dsonar.host.url=${{ env.SONAR_HOST_URL }}
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarqube.gmrandazzo.com' }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
