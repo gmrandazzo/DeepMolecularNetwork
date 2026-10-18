@@ -7,12 +7,7 @@
 
 import sys
 from pathlib import Path
-import tensorflow
-
-if int(tensorflow.__version__[0]) > 1:
-    from tensorflow.keras.models import load_model
-else:
-    from keras.models import load_model
+from deepmolecularnetwork.framework import load_model
 
 
 def GetValidationFnc():
@@ -105,10 +100,9 @@ def ReadDescriptorOrder(mpath):
     odesc = []
     odesc_file = "%s/odesc_header.csv" % (str(Path(mpath).absolute()))
     if Path(odesc_file).exists():
-        f = open(odesc_file)
-        for line in f:
-            odesc.append(line.strip())
-        f.close()
+        with open(odesc_file) as f:
+            for line in f:
+                odesc.append(line.strip())
     return odesc
 
 

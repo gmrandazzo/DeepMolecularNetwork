@@ -15,85 +15,71 @@ def nsplit(line, sep):
     return list(filter(None, v))
 
 
+def _extract_numbers(stripped, values):
+    if "attribute" in stripped:
+        parts = nsplit(stripped, "attribute")[:-1]
+        if not parts:
+            return
+        stripped = str(parts[0])
+
+    v = nsplit(stripped, " ")
+    if 1 <= len(v) <= 3:
+        values.extend(float(item) for item in v)
+
+
 def readOpenDX(ifile):
     voxel = None
     origin = None
     delta = []
-    f = open(ifile)
-    c = 1
     values = []
-    for line in f:
-        if "gridpositions counts" in line:
-            v = nsplit(line.strip(), " ")
-            grid_size = [int(v[5]), int(v[6]), int(v[7])]
-            voxel = np.zeros(grid_size)
-        elif "origin" in line:
-            v = nsplit(line.strip(), " ")
-            origin = [float(v[1]), float(v[2]), float(v[3])]
-        elif "delta" in line:
-            v = nsplit(line.strip(), " ")
-            delta.append(float(v[c]))
-            c += 1
-        else:
-            if "attribute" in line.strip():
-                # line = str(nsplit(line.strip(), "attribute")[:-1][0])
-                line = nsplit(line.strip(), "attribute")[:-1]
-                if len(line) > 0:
-                    line = str(line[0])
-                else:
-                    continue
-            else:
-                line = line.strip()
+    grid_size = None
+    c = 1
 
-            v = nsplit(line, " ")
-            if len(v) == 3 or len(v) == 2 or len(v) == 1:
-                for item in v:
-                    values.append(float(item))
-            else:
-                continue
-    c = 0
-    for i in range(grid_size[0]):
-        for j in range(grid_size[1]):
-            for k in range(grid_size[2]):
-                voxel[i][j][k] = values[c]
+    with open(ifile) as f:
+        for raw_line in f:
+            stripped = raw_line.strip()
+            if "gridpositions counts" in stripped:
+                v = nsplit(stripped, " ")
+                grid_size = [int(v[5]), int(v[6]), int(v[7])]
+                voxel = np.zeros(grid_size)
+            elif "origin" in stripped:
+                v = nsplit(stripped, " ")
+                origin = [float(v[1]), float(v[2]), float(v[3])]
+            elif "delta" in stripped:
+                v = nsplit(stripped, " ")
+                delta.append(float(v[c]))
                 c += 1
+            else:
+                _extract_numbers(stripped, values)
+
+    if grid_size is not None:
+        total = grid_size[0] * grid_size[1] * grid_size[2]
+        voxel = np.array(values[:total], dtype=np.float64).reshape(grid_size)
 
     return voxel, origin, delta
 
 
 def writeOpenDX(voxel, origin, delta, outfile):
-    fo = open(outfile, "w")
-    fo.write(
-        "object 1 class gridpositions counts %d %d %d\n"
-        % (voxel.shape[0], voxel.shape[1], voxel.shape[2])
-    )
-    fo.write(f"origin {origin[0]:f} {origin[1]:f} {origin[2]:f}\n")
-    fo.write("delta %f 0.0 0.0\n" % (delta[0]))
-    fo.write("delta 0.0 %f 0.0\n" % (delta[1]))
-    fo.write("delta 0.0 0.0 %f\n" % (delta[2]))
-    fo.write(
-        "object 2 class gridconnections counts %d %d %d\n"
-        % (voxel.shape[0], voxel.shape[1], voxel.shape[2])
-    )
-    fo.write(
-        "object 3 class array type float rank 0 items %d data follows\n"
-        % (voxel.shape[0] * voxel.shape[1] * voxel.shape[2])
-    )
-    n = 0
-    for i in range(len(voxel)):
-        for j in range(len(voxel[i])):
-            for k in range(len(voxel[i][j])):
-                if n == 2:
-                    fo.write("%.6e\n" % (voxel[i][j][k]))
-                    n = 0
-                else:
-                    fo.write("%.6e " % (voxel[i][j][k]))
-                    n += 1
-    if n != 0:
-        fo.write("\n")
-    # fo.write("attribute \"dep\" string positions\n")
-    fo.write('object  "regular positions regular connections" class field\n')
-    fo.write('component "positions" value 1\n')
-    fo.write('component "connections" value 2\n')
-    fo.write('component "data" value 3\n')
-    fo.close()
+    s0, s1, s2 = voxel.shape[0], voxel.shape[1], voxel.shape[2]
+    with open(outfile, "w") as fo:
+        fo.write(f"object 1 class gridpositions counts {s0} {s1} {s2}\n")
+        fo.write(f"origin {origin[0]:f} {origin[1]:f} {origin[2]:f}\n")
+        fo.write(f"delta {delta[0]:f} 0.0 0.0\n")
+        fo.write(f"delta 0.0 {delta[1]:f} 0.0\n")
+        fo.write(f"delta 0.0 0.0 {delta[2]:f}\n")
+        fo.write(f"object 2 class gridconnections counts {s0} {s1} {s2}\n")
+        total_items = voxel.shape[0] * voxel.shape[1] * voxel.shape[2]
+        fo.write(f"object 3 class array type float rank 0 items {total_items} data follows\n")
+        flat = voxel.ravel()
+        for i in range(0, len(flat), 3):
+            chunk = flat[i : i + 3]
+            fo.write(" ".join(f"{val:.6e}" for val in chunk) + "\n")
+        fo.write('object  "regular positions regular connections" class field\n')
+        fo.write('component "positions" value 1\n')
+        fo.write('component "connections" value 2\n')
+        fo.write('component "data" value 3\n')
+
+
+# Snake_case aliases for modern standard conventions
+read_open_dx = readOpenDX
+write_open_dx = writeOpenDX

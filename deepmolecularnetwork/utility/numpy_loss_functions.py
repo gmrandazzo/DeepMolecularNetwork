@@ -109,3 +109,11 @@ def LOGMAE(y_true, y_pred, mask_value=-9999.0):
     Log MAE
     """
     return np.log(MAE(np.array(y_true), np.array(y_pred), mask_value))
+
+
+# Snake_case aliases
+gen_mask = genMask
+mse = MSE
+mae = MAE
+rsq = RSQ
+log_mae = LOGMAE

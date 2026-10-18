@@ -93,8 +93,7 @@ def save_model_compat(model, filepath, **kwargs):
     Appends appropriate format extension if needed.
     """
     p = str(filepath)
-    if is_keras_3():
-        if not (p.endswith(".keras") or p.endswith(".h5")):
-            p = p + ".keras"
+    if is_keras_3() and not (p.endswith(".keras") or p.endswith(".h5")):
+        p = p + ".keras"
     model.save(p, **kwargs)
     return p
