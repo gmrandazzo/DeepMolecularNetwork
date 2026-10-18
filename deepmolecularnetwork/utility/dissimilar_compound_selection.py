@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -12,18 +11,18 @@ Maximum dissimilarity object selection
 from random import randrange
 from random import seed
 from datetime import datetime
-import time
+
 
 def _median(lst):
-    """ Get mediane of list """
+    """Get median of list"""
     slst = sorted(lst)
     if len(slst) % 2 != 0:
-        return slst[len(slst)/2]
+        return slst[len(slst) // 2]
     else:
-        return (slst[len(slst)/2] + slst[len(slst)/2-1])/2.0
+        return (slst[len(slst) // 2] + slst[len(slst) // 2 - 1]) / 2.0
 
 
-class DISC(object):
+class DISC:
     """Perform Dissimilarity compound selection
        through different algorithm variants:
 
@@ -66,7 +65,7 @@ class DISC(object):
 
     def __init__(self, dmx, method, nobjects=0):
         try:
-            self.dmx_ = dmx.tolist() #convert to list to be faster
+            self.dmx_ = dmx.tolist()  # convert to list to be faster
         except AttributeError:
             self.dmx_ = dmx
         self.nobjects = nobjects
@@ -74,13 +73,13 @@ class DISC(object):
         self.method = method.lower().strip()
 
     def dislist(self):
-        """ Return the list of dissimilar compounds """
+        """Return the list of dissimilar compounds"""
         return self.disids
 
     def select(self):
-        """ Run the Dissimilarity selection"""
+        """Run the Dissimilarity selection"""
         seed(datetime.now().microsecond)
-        self.disids.append(randrange(0, len(self.dmx_)-1))
+        self.disids.append(randrange(0, len(self.dmx_) - 1))
 
         if self.method == "min":
             while len(self.disids) < self.nobjects:
@@ -97,7 +96,7 @@ class DISC(object):
         return self.dislist()
 
     def _appendnext_med(self):
-        """ Append the next object following the sum dissimilarity """
+        """Append the next object following the sum dissimilarity"""
         # first column is the distance and second is the objectid
         dis = [[0, i] for i in range(len(self.dmx_))]
         for i in range(len(self.dmx_)):
@@ -116,7 +115,7 @@ class DISC(object):
         self.disids.append(dis[-1][-1])
 
     def _appendnext_sum(self):
-        """ Append the next object following the median dissimilarity """
+        """Append the next object following the median dissimilarity"""
         # first column is the distance and second is the objectid
         dis = [[0, i] for i in range(len(self.dmx_))]
         for i in range(len(self.disids)):
@@ -133,7 +132,7 @@ class DISC(object):
         self.disids.append(dis[-1][-1])
 
     def _appendnext_max(self):
-        """ Append the next object following the maximum dissimilarity """
+        """Append the next object following the maximum dissimilarity"""
         dis = [[0, i] for i in range(len(self.dmx_))]
         for i in range(len(self.dmx_)):
             if i not in self.disids:
@@ -156,7 +155,7 @@ class DISC(object):
         self.disids.append(dis[-1][-1])
 
     def _appendnext_min(self):
-        """ Append the next object following the minimum dissimilarity """
+        """Append the next object following the minimum dissimilarity"""
         dis = [[0, i] for i in range(len(self.dmx_))]
         # t = time.time()
         for i in range(len(self.dmx_)):
@@ -182,7 +181,7 @@ class DISC(object):
         # print "-"*10
 
     def _appendnext_min2(self):
-        """ Append the next object following the minimum dissimilarity """
+        """Append the next object following the minimum dissimilarity"""
         # t = time.time()
         dis = []
         for i in range(len(self.disids)):
@@ -190,7 +189,7 @@ class DISC(object):
             objid = None
             for j in range(len(self.dmx_[int(self.disids[i])])):
                 if self.disids[i] != j and j not in self.disids:
-                    if mindis == None:
+                    if mindis is None:
                         mindis = self.dmx_[int(self.disids[i])][j]
                         objid = j
                     elif self.dmx_[int(self.disids[i])][j] > mindis:
@@ -199,9 +198,9 @@ class DISC(object):
                     else:
                         continue
                 else:
-                  continue
+                    continue
 
-            if mindis != None:
+            if mindis is not None:
                 dis.append([mindis, objid])
             else:
                 continue

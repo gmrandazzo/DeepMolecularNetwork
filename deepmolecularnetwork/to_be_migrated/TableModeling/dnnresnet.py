@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -7,6 +6,7 @@
 # See the file LICENSE for details
 
 import tensorflow
+
 if int(tensorflow.__version__[0]) > 1:
     from tensorflow.keras.layers import Dense, BatchNormalization, Activation
     from tensorflow.keras.layers import Input, Flatten
@@ -22,10 +22,8 @@ else:
     from keras import backend as K
     from keras.models import Model
 
-def dnn_resnet_layer(inputs,
-                     nunits=100,
-                     activation='relu',
-                     batch_normalization=True):
+
+def dnn_resnet_layer(inputs, nunits=100, activation="relu", batch_normalization=True):
     """DNN-Batch Normalization-Activation stack builder
 
     # Arguments
@@ -37,15 +35,17 @@ def dnn_resnet_layer(inputs,
     # Returns
         x (tensor): tensor as input to the next layer
     """
-    dnn = Dense(nunits,
-                use_bias=True,
-                kernel_initializer='glorot_uniform',
-                bias_initializer='zeros',
-                kernel_regularizer=l2(1e-4),
-                bias_regularizer=None,
-                activity_regularizer=None,
-                kernel_constraint=None,
-                bias_constraint=None)
+    dnn = Dense(
+        nunits,
+        use_bias=True,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=l2(1e-4),
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+    )
 
     x = dnn(inputs)
     if batch_normalization:

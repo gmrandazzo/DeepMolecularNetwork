@@ -160,3 +160,11 @@ dmypy.json
 
 # Others
 .idea/
+.venv*
+*.h5
+*.keras
+logs/
+*pred.csv
+testmodel*
+coverage.xml
+.coverage

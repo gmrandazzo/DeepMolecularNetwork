@@ -47,5 +47,3 @@ Cite/Acknowledgements
 Please if you use this for commercial please send me a mail with your logo
 Acknowledge the github page and the author in your application.
 If you use for academic research please cite the original GitHub repository.
-
-

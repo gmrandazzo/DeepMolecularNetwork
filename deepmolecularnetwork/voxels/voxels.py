@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -9,7 +8,7 @@
 import numpy as np
 from multiprocessing import cpu_count, Pool
 import os
-from openDX import readOpenDX, writeOpenDX
+from deepmolecularnetwork.voxels.opendx import readOpenDX, writeOpenDX
 from pathlib import Path
 import random
 import sys
@@ -17,12 +16,12 @@ import sys
 
 def SaveVoxelDatabase(path_, name, voxels):
     print(voxels.shape)
-    vpath_ = "%s/%s.vdb" % (path_, name)
+    vpath_ = f"{path_}/{name}.vdb"
     i = 0
     if Path(vpath_).is_dir() is False:
         os.makedirs(vpath_, exist_ok=True)
     else:
-        i = len(list(Path(vpath_).glob('**/*.npy')))
+        i = len(list(Path(vpath_).glob("**/*.npy")))
     db_path = "%s/db%d" % (vpath_, i)
     np.save(db_path, voxels)
 
@@ -36,7 +35,7 @@ def LoadVoxelDatabase(path_):
             for db in Path(str(p)).iterdir():
                 if db.is_file() and ".npy" in str(db):
                     arr = np.load(str(db), mmap_mode=None)
-                    #arr = np.load(str(db), mmap_mode='r')
+                    # arr = np.load(str(db), mmap_mode='r')
                     if name in d.keys():
                         # Append multiple conformations
                         # stored with the same name
@@ -48,10 +47,11 @@ def LoadVoxelDatabase(path_):
     return d
 
 
-class VoxelObject(object):
+class VoxelObject:
     """
     Object to define the 3D Object dataset
     """
+
     def __init__(self, dxnames):
         """
         Initialisation voxel dataset
@@ -59,11 +59,11 @@ class VoxelObject(object):
         """
         self.name = str(Path(dxnames[0]).resolve().stem.split(".")[0])
         if "Conf" in self.name:
-            #self.name = str.split(self.name, "_")[-1]
+            # self.name = str.split(self.name, "_")[-1]
             a = str.split(self.name, "_")[1:]
             self.name = ""
-            for i in range(len(a)-1):
-                self.name += a[i]+"_"
+            for i in range(len(a) - 1):
+                self.name += a[i] + "_"
             self.name += a[-1]
 
         self.voxels = []
@@ -76,9 +76,13 @@ class VoxelObject(object):
             self.deltas.append(d)
 
     def dxRead(self, dxfile):
-        """ Read the DX file and convert to numpy array """
+        """Read the DX file and convert to numpy array"""
         print("Loading %s ..." % (dxfile))
-        v, o, d, = readOpenDX(dxfile)
+        (
+            v,
+            o,
+            d,
+        ) = readOpenDX(dxfile)
         return v, o, d
 
     def toFlatten(self):
@@ -89,8 +93,6 @@ class VoxelObject(object):
                     for k in range(len(self.voxels[ch][i][j])):
                         row.append(self.voxels[ch][i][j][k])
         return np.array(row)
-
-
 
     def ComputeVoxelRotation(self, n_rotations, multiple_ch=False):
         if n_rotations == 0:
@@ -112,8 +114,6 @@ class VoxelObject(object):
             p.close()
             return np.array(x_rotated)
 
-
-
     """
     def ComputeChannelGeneration(self, voxels):
         p = Pool(processes=cpu_count())
@@ -122,7 +122,11 @@ class VoxelObject(object):
         return np.array(ch_voxels)
 
 
-    def ChannelsGenerator(self, voxel, isovalues=[-0.3, -0.2, -0.15, -0.1, -0.05, 0.05, 0.10, 0.15, 0.20, 0.30]):
+    def ChannelsGenerator(
+        self,
+        voxel,
+        isovalues=[-0.3, -0.2, -0.15, -0.1, -0.05, 0.05, 0.10, 0.15, 0.20, 0.30],
+    ):
        #  N.B.: with this function the data_format have the channel as first in Conv3D!!
         ch = [np.zeros(voxel.shape) for i in range(len(isovalues)+1)]
         for c in range(len(ch)):
@@ -201,9 +205,9 @@ class VoxelObject(object):
             ngs.append(np.zeros(voxel.shape))
         # g = np.array(voxel)
         # new_grid = np.zeros(g.shape)
-        h_x = gs[0].shape[0] / 2.
-        h_y = gs[0].shape[1] / 2.
-        h_z = gs[0].shape[2] / 2.
+        h_x = gs[0].shape[0] / 2.0
+        h_y = gs[0].shape[1] / 2.0
+        h_z = gs[0].shape[2] / 2.0
         yaw = random.uniform(-np.pi, np.pi)
         pitch = random.uniform(-np.pi, np.pi)
         roll = random.uniform(-np.pi, np.pi)
@@ -228,18 +232,20 @@ class VoxelObject(object):
                     np_ = f_t @ p
                     np_r = f_r @ np_
                     np_r_t = f_b @ np_r
-                    n_i, n_j, n_k, n_t = np.floor(np_r_t).astype('int')
-                    if (n_i >= 0 and n_j >= 0 and n_k >= 0) and (n_i < len(gs[0]) and n_j < len(gs[0][i]) and n_k < len(gs[0][i][j])):
+                    n_i, n_j, n_k, n_t = np.floor(np_r_t).astype("int")
+                    if (n_i >= 0 and n_j >= 0 and n_k >= 0) and (
+                        n_i < len(gs[0]) and n_j < len(gs[0][i]) and n_k < len(gs[0][i][j])
+                    ):
                         # new_grid[n_i][n_j][n_k] = g[i][j][k]
                         for ch in range(len(gs)):
                             ngs[ch][n_i][n_j][n_k] = gs[ch][i][j][k]
                     else:
-                        # print("Warning voxel point out of space ", (n_i, n_j, n_k, len(gs[0]), len(gs[0][i]), len(gs[0][i][j])))
+                        # Warning: voxel point out of space
                         continue
         return ngs
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) == 3:
         vobj = VoxelObject([sys.argv[1]])
         new_voxels = vobj.VoxelRotation(vobj.voxels)

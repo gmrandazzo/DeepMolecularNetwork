@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -7,6 +6,7 @@
 # See the file LICENSE for details
 
 import tensorflow as tf
+
 if int(tf.__version__[0]) > 1:
     from tensorflow.keras import backend as K
     from tensorflow.keras.callbacks import TensorBoard
@@ -30,6 +30,7 @@ import time
 from Voxel import LoadVoxelDatabase
 from datetime import datetime
 import os
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append("%s/../Base" % (dir_path))
 # from FeatureImportance import FeatureImportance, WriteFeatureImportance
@@ -47,7 +48,7 @@ from modelvalidation import StaticGroupCV
 from modelvalidation import RepeatedStratifiedCV
 
 
-class Voxel3DModel(object):
+class Voxel3DModel:
     def __init__(self, csv_target, db, csv_descriptors=None):
         self.voxels = LoadVoxelDatabase(db)
         print("Max Conformations %d " % (len(list(self.voxels.values())[0])))
@@ -66,7 +67,9 @@ class Voxel3DModel(object):
         for key in self.voxels.keys():
             max_conf = len(self.voxels[key])
             # max_rot = len(self.voxels[key][0])
-            self.statvoxconf[key] = [[0 for j in range(len(self.voxels[key][i]))] for i in range(max_conf)]
+            self.statvoxconf[key] = [
+                [0 for j in range(len(self.voxels[key][i]))] for i in range(max_conf)
+            ]
         return
 
     def getInputVoxelShape(self):
@@ -83,10 +86,10 @@ class Voxel3DModel(object):
             # 1 = conformation
             # 20 = rotations
             # 2, 50, 50, 50 = two channel voxels
-            #print(voxel.shape)
+            # print(voxel.shape)
             if len(input_shape) is 0:
                 input_shape = voxel[0][0].shape
-                #input_shape = voxel[0].shape
+                # input_shape = voxel[0].shape
             else:
                 for i in range(len(input_shape)):
                     if voxel[0][0].shape[i] != input_shape[i]:
@@ -98,10 +101,10 @@ class Voxel3DModel(object):
         if len(input_shape) == 3:
             # Channel last
             input_shape.append(1)
-            conv3d_chtype = 'channels_last'
+            conv3d_chtype = "channels_last"
         else:
-            conv3d_chtype = 'channels_first'
-        print("Input shape: {}".format(input_shape))
+            conv3d_chtype = "channels_first"
+        print(f"Input shape: {input_shape}")
         print("Channel type: %s" % (conv3d_chtype))
         return tuple(input_shape), conv3d_chtype
 
@@ -114,7 +117,11 @@ class Voxel3DModel(object):
         keys = []
         if self.other_descriptors is not None:
             for key in allkeys:
-                if key in self.voxels.keys() and key in self.other_descriptors.keys() and key in self.target.keys():
+                if (
+                    key in self.voxels.keys()
+                    and key in self.other_descriptors.keys()
+                    and key in self.target.keys()
+                ):
                     keys.append(key)
                 else:
                     continue
@@ -124,7 +131,7 @@ class Voxel3DModel(object):
                     keys.append(key)
                 else:
                     continue
-  
+
     def makeDataset(self, keys, nrotations):
         """
         Create a dataset giving:
@@ -134,16 +141,17 @@ class Voxel3DModel(object):
         """
         batch_features = None
         if "last" in self.conv3d_chtype:
-            batch_features = np.array([]).reshape(0,
-                                                  self.input_shape[0],
-                                                  self.input_shape[1],
-                                                  self.input_shape[2])
+            batch_features = np.array([]).reshape(
+                0, self.input_shape[0], self.input_shape[1], self.input_shape[2]
+            )
         else:
-            batch_features = np.array([]).reshape(0,
-                                                  self.input_shape[0],
-                                                  self.input_shape[1],
-                                                  self.input_shape[2],
-                                                  self.input_shape[3])
+            batch_features = np.array([]).reshape(
+                0,
+                self.input_shape[0],
+                self.input_shape[1],
+                self.input_shape[2],
+                self.input_shape[3],
+            )
         batch_desc_features = None
         if self.other_descriptors is not None:
             batch_desc_features = np.array([]).reshape(0, self.nfeatures)
@@ -158,13 +166,13 @@ class Voxel3DModel(object):
                 max_rot = len(self.voxels[key][0])
                 # could be float or array
                 target_val = self.target[key]
-                rconf = random.randint(0, max_conf-1)
-                rrot = random.randint(0, max_rot-1)
+                rconf = random.randint(0, max_conf - 1)
+                rrot = random.randint(0, max_rot - 1)
                 while True:
                     # print("BAO")
                     if "%s-%d-%d" % (key, rconf, rrot) in selected_confs:
-                        rconf = random.randint(0, max_conf-1)
-                        rrot = random.randint(0, max_rot-1)
+                        rconf = random.randint(0, max_conf - 1)
+                        rrot = random.randint(0, max_rot - 1)
                     else:
                         break
                 # print("END")
@@ -174,13 +182,18 @@ class Voxel3DModel(object):
                 batch_features = np.vstack([batch_features, [voxel]])
                 batch_target.append(target_val)
                 if self.other_descriptors is not None:
-                    batch_desc_features = np.vstack([batch_desc_features, self.other_descriptors[key]])
+                    batch_desc_features = np.vstack(
+                        [batch_desc_features, self.other_descriptors[key]]
+                    )
 
         if "last" in self.conv3d_chtype:
-            batch_features = batch_features.reshape(batch_features.shape[0],
-                                                    batch_features.shape[1],
-                                                    batch_features.shape[2],
-                                                    batch_features.shape[3], 1)
+            batch_features = batch_features.reshape(
+                batch_features.shape[0],
+                batch_features.shape[1],
+                batch_features.shape[2],
+                batch_features.shape[3],
+                1,
+            )
 
         if batch_desc_features is not None:
             """
@@ -200,11 +213,11 @@ class Voxel3DModel(object):
         i = 0
         while True:
             random.seed(datetime.now().microsecond)
-            #startTime = time.time()
+            # startTime = time.time()
             X, y = self.makeDataset(keys, n_rot_repetitions)
-            #elapsedTime = time.time() - startTime
+            # elapsedTime = time.time() - startTime
             # print('[VoxelTrainGenerator] {} finished in {} ms'.format(i, int(elapsedTime * 1000)))
-            #print("Dataset no. %d\n\n" % (i))
+            # print("Dataset no. %d\n\n" % (i))
             i += 1
             yield X, y
 
@@ -223,21 +236,23 @@ class Voxel3DModel(object):
         return batch_perm
 
 
-def simplerun(db,
-              csv_target,
-              csv_descriptors,
-              num_epochs,
-              n_rot_train,
-              train_steps_per_epoch_,
-              n_rotation_test,
-              test_steps_per_epoch_,
-              ndense_layers,
-              nunits,
-              nfilters,
-              random_state,
-              outmodel=None,
-              fcvgroup=None,
-              tid=None):
+def simplerun(
+    db,
+    csv_target,
+    csv_descriptors,
+    num_epochs,
+    n_rot_train,
+    train_steps_per_epoch_,
+    n_rotation_test,
+    test_steps_per_epoch_,
+    ndense_layers,
+    nunits,
+    nfilters,
+    random_state,
+    outmodel=None,
+    fcvgroup=None,
+    tid=None,
+):
     # Load the dataset
     vm = Voxel3DModel(csv_target, db, csv_descriptors)
     available_keys = vm.GetAvailableKeys()
@@ -266,13 +281,11 @@ def simplerun(db,
             ttfn = TrainTestSplit
         else:
             print("Using custom train/test split function")
-        train_keys, test_keys = ttfn(list(self.target.keys()),
-                                test_size=0.20,
-                                random_state=random_state)
-        
+        train_keys, test_keys = ttfn(
+            list(self.target.keys()), test_size=0.20, random_state=random_state
+        )
 
-    print("Trainin set size: %d Validation set size %d" % (len(train_keys),
-                                                            len(test_keys)))
+    print("Trainin set size: %d Validation set size %d" % (len(train_keys), len(test_keys)))
 
     train_generator = vm.VoxelTrainGenerator(train_keys, n_rot_train)
 
@@ -283,33 +296,19 @@ def simplerun(db,
     model_ = GetKerasModel()
     if vm.other_descriptors is None:
         if model_ is None:
-            model = build_model(vm.conv3d_chtype,
-                                vm.input_shape,
-                                ndense_layers,
-                                nunits,
-                                nfilters)
+            model = build_model(vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters)
         else:
-            model = model_(vm.conv3d_chtype,
-                           vm.input_shape,
-                           ndense_layers,
-                           nunits,
-                           nfilters)
+            model = model_(vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters)
         print(model.summary())
     else:
         if model_ is None:
-            model = build_2DData_model(vm.conv3d_chtype,
-                                       vm.input_shape,
-                                       vm.nfeatures,
-                                       ndense_layers,
-                                       nunits,
-                                       nfilters)
+            model = build_2DData_model(
+                vm.conv3d_chtype, vm.input_shape, vm.nfeatures, ndense_layers, nunits, nfilters
+            )
         else:
-            model = model_(vm.conv3d_chtype,
-                           vm.input_shape,
-                           vm.nfeatures,
-                           ndense_layers,
-                           nunits,
-                           nfilters)
+            model = model_(
+                vm.conv3d_chtype, vm.input_shape, vm.nfeatures, ndense_layers, nunits, nfilters
+            )
 
         """
         for l in model.layers[0].layers:
@@ -321,17 +320,18 @@ def simplerun(db,
 
     dname = os.path.basename(csv_target).replace(".csv", "")
     dname += os.path.basename(db)
-    log_dir_ = ("./logs/%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (dname,
-                                                          num_epochs,
-                                                          train_steps_per_epoch_,
-                                                          nfilters,
-                                                          ndense_layers,
-                                                          nunits))
+    log_dir_ = "./logs/%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (
+        dname,
+        num_epochs,
+        train_steps_per_epoch_,
+        nfilters,
+        ndense_layers,
+        nunits,
+    )
     log_dir_ += time.strftime("%Y%m%d%H%M%S")
-    callbacks_ = [TensorBoard(log_dir=log_dir_,
-                              histogram_freq=0,
-                              write_graph=False,
-                              write_images=False)]
+    callbacks_ = [
+        TensorBoard(log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False)
+    ]
     """
     ,
                   EarlyStopping(monitor='val_loss',
@@ -343,18 +343,20 @@ def simplerun(db,
 
     test_generator = vm.VoxelTrainGenerator(test_keys, n_rot_train)
 
-    model.fit_generator(train_generator,
-                        epochs=num_epochs,
-                        steps_per_epoch=train_steps_per_epoch_,
-                        verbose=1,
-                        # max_queue_size=2,
-                        # workers=0,
-                        # validation_data=(x_test_, y_test_),
-                        validation_data=test_generator,
-                        validation_steps=test_steps_per_epoch_,
-                        # nb_val_samples=x_test.shape[0],
-                        callbacks=callbacks_,
-                        use_multiprocessing=False)
+    model.fit_generator(
+        train_generator,
+        epochs=num_epochs,
+        steps_per_epoch=train_steps_per_epoch_,
+        verbose=1,
+        # max_queue_size=2,
+        # workers=0,
+        # validation_data=(x_test_, y_test_),
+        validation_data=test_generator,
+        validation_steps=test_steps_per_epoch_,
+        # nb_val_samples=x_test.shape[0],
+        callbacks=callbacks_,
+        use_multiprocessing=False,
+    )
 
     x_test_, y_test_ = vm.VoxelTestSetGenerator(test_keys, n_rotation_test)
     y_pred_ = model.predict(x_test_)
@@ -373,26 +375,28 @@ def simplerun(db,
         model.save(outmodel)
 
 
-def cv(db,
-       csv_target,
-       csv_descriptors,
-       n_splits_,
-       n_repeats_,
-       num_epochs,
-       n_rot_train,
-       train_steps_per_epoch_,
-       n_rot_test,
-       test_steps_per_epoch_,
-       ndense_layers,
-       nunits,
-       nfilters,
-       random_state,
-       cvout=None,
-       fcvgroup=None,
-       featimp_out=None,
-       y_recalc=None,
-       mout=None):
-    
+def cv(
+    db,
+    csv_target,
+    csv_descriptors,
+    n_splits_,
+    n_repeats_,
+    num_epochs,
+    n_rot_train,
+    train_steps_per_epoch_,
+    n_rot_test,
+    test_steps_per_epoch_,
+    ndense_layers,
+    nunits,
+    nfilters,
+    random_state,
+    cvout=None,
+    fcvgroup=None,
+    featimp_out=None,
+    y_recalc=None,
+    mout=None,
+):
+
     # Load the dataset
     vm = Voxel3DModel(csv_target, db, csv_descriptors)
     available_keys = vm.GetAvailableKeys()
@@ -420,7 +424,7 @@ def cv(db,
     mout_path = None
     if mout is not None:
         # Utilised to store the out path
-        mout_path = Path("%s_%s" % (time.strftime("%Y%m%d%H%M%S"), mout))
+        mout_path = Path("{}_{}".format(time.strftime("%Y%m%d%H%M%S"), mout))
         mout_path.mkdir(exist_ok=True, parents=True)
         if vm.other_descriptors is not None:
             # Save the descriptor order
@@ -437,50 +441,34 @@ def cv(db,
         cvmethod = StaticGroupCV(cvgroups)
         # cvmethod = RepeatedStratifiedCV(cvgroups, n_repeats_, 2)
     else:
-        cvmethod = RepeatedKFold(available_keys,
-                                 n_splits_,
-                                 n_repeats_,
-                                 random_state,
-                                 test_size=0.2)
+        cvmethod = RepeatedKFold(available_keys, n_splits_, n_repeats_, random_state, test_size=0.2)
     cv_ = 0
     for train_keys, val_keys, test_keys in cvmethod:
-        print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
-                                                                        len(val_keys),
-                                                                        len(test_keys)))
+        print(
+            "Train set size: %d Val set size %d Test set size: %d"
+            % (len(train_keys), len(val_keys), len(test_keys))
+        )
         # Some memory clean-up
         K.clear_session()
         model = None
         model_ = GetKerasModel()
         if vm.other_descriptors is None:
             if model_ is None:
-                model = build_model(vm.conv3d_chtype,
-                                    vm.input_shape,
-                                    ndense_layers,
-                                    nunits,
-                                    nfilters)
+                model = build_model(
+                    vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters
+                )
             else:
-                model = model_(vm.conv3d_chtype,
-                               vm.input_shape,
-                               ndense_layers,
-                               nunits,
-                               nfilters)
+                model = model_(vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters)
             # model = model_scirep(vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters)
             # model = ResNetModel(vm.input_shape)
             print(model.summary())
         else:
             if model_ is None:
-                model = build_2DData_model(vm.conv3d_chtype,
-                                           vm.input_shape,
-                                           vm.nfeatures,
-                                           ndense_layers,
-                                           nunits,
-                                           nfilters)
+                model = build_2DData_model(
+                    vm.conv3d_chtype, vm.input_shape, vm.nfeatures, ndense_layers, nunits, nfilters
+                )
             else:
-                model = model_(vm.conv3d_chtype,
-                               vm.input_shape,
-                               ndense_layers,
-                               nunits,
-                               nfilters)
+                model = model_(vm.conv3d_chtype, vm.input_shape, ndense_layers, nunits, nfilters)
 
             """
             for l in model.layers[0].layers:
@@ -490,44 +478,46 @@ def cv(db,
             print(model.summary())
 
         dname = os.path.basename(csv_target).replace(".csv", "")
-        log_dir_ = ("./logs/cv%d_%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (cv_,
-                                                                   dname,
-                                                                   num_epochs,
-                                                                   train_steps_per_epoch_,
-                                                                   nfilters,
-                                                                   ndense_layers,
-                                                                   nunits))
+        log_dir_ = "./logs/cv%d_%s_%d_#rot%d_#f%d_#dl%d_#u%d_" % (
+            cv_,
+            dname,
+            num_epochs,
+            train_steps_per_epoch_,
+            nfilters,
+            ndense_layers,
+            nunits,
+        )
         log_dir_ += time.strftime("%Y%m%d%H%M%S")
-        
+
         model_outfile = "%s/%d.h5" % (str(mout_path.absolute()), cv_)
-        
-        #check if model exist....
+
+        # check if model exist....
         if Path(model_outfile).exists():
             print("The model %s exist.\nLoading the model and continue for prediction")
         else:
-            callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                    histogram_freq=0,
-                                    write_graph=False,
-                                    write_images=False),
-                        ModelCheckpoint(model_outfile,
-                                        monitor='val_loss',
-                                        verbose=0,
-                                        save_best_only=True)]
+            callbacks_ = [
+                TensorBoard(
+                    log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False
+                ),
+                ModelCheckpoint(model_outfile, monitor="val_loss", verbose=0, save_best_only=True),
+            ]
 
             train_generator = vm.VoxelTrainGenerator(train_keys, n_rot_train)
             x_train_, y_train_ = vm.VoxelTestSetGenerator(train_keys, n_rot_train)
             x_test_, y_test_ = vm.VoxelTestSetGenerator(test_keys, n_rot_test)
             x_val_, y_val_ = vm.VoxelTestSetGenerator(val_keys, n_rot_test)
             val_generator = vm.VoxelTrainGenerator(val_keys, n_rot_test)
-            model.fit_generator(train_generator,
-                                epochs=num_epochs,
-                                steps_per_epoch=train_steps_per_epoch_,
-                                verbose=1,
-                                # validation_data=(x_test_, y_test_),
-                                validation_data=val_generator,
-                                validation_steps=test_steps_per_epoch_,
-                                callbacks=callbacks_,
-                                use_multiprocessing=True)
+            model.fit_generator(
+                train_generator,
+                epochs=num_epochs,
+                steps_per_epoch=train_steps_per_epoch_,
+                verbose=1,
+                # validation_data=(x_test_, y_test_),
+                validation_data=val_generator,
+                validation_steps=test_steps_per_epoch_,
+                callbacks=callbacks_,
+                use_multiprocessing=True,
+            )
 
             """
             test_scores = model.evaluate(x_test_, y_test_)
@@ -541,14 +531,14 @@ def cv(db,
         r2 = RSQ(y_train_, y_recalc)
         q2 = RSQ(y_test_, ypred_test)
         vr2 = RSQ(y_val_, ypred_val)
-        print("Train R2: %.4f Test Q2: %.4f Val: R2: %.4f\n" % (r2, q2,     vr2))
+        print(f"Train R2: {r2:.4f} Test Q2: {q2:.4f} Val: R2: {vr2:.4f}\n")
 
         # Store the test prediction result
         k = 0
         c = 0
         for i in range(len(ypred_val)):
             valpredictions[test_keys[k]].append(list(ypred_val[i]))
-            if c == n_rot_test-1:
+            if c == n_rot_test - 1:
                 k += 1
                 c = 0
             else:
@@ -559,7 +549,7 @@ def cv(db,
         c = 0
         for i in range(len(ypred_test)):
             predictions[test_keys[k]].append(list(ypred_test[i]))
-            if c == n_rot_test-1:
+            if c == n_rot_test - 1:
                 k += 1
                 c = 0
             else:
@@ -591,14 +581,14 @@ def cv(db,
                     ypred_perm = model.predict(x_val_perm)
                     # e_perm = MSE(list(y_test_), list(ypred_perm))
                     e_perm = MAE(list(y_test_), list(ypred_perm))
-                    feat_imp[fid_].append(e_perm/e_orig)
+                    feat_imp[fid_].append(e_perm / e_orig)
 
             # Calculate the feature importance for the voxel information
             for it in range(feat_imp_iterations):
                 x_val_perm = vm.FeaturePermutation(x_val_, fid=9999)
                 ypred_perm = model.predict(x_val_perm)
                 e_perm = MAE(list(y_test_), list(ypred_perm))
-                feat_imp[-1].append(e_perm/e_orig)
+                feat_imp[-1].append(e_perm / e_orig)
 
         if mout_path is not None:
             model.save("%s/%d.h5" % (str(mout_path.absolute()), cv_))
@@ -607,7 +597,7 @@ def cv(db,
 
     if cvout is not None:
         WriteCrossValidationOutput(cvout, self.target, predictions, None)
-    
+
     if feat_imp is not None:
         fo = open("%s" % (featimp_out), "w")
         for i in range(vm.nfeatures):
@@ -623,24 +613,22 @@ def cv(db,
             med_a = np.percentile(a, 50)
             q3 = np.percentile(a, 75)
             max_a = a.max()
-            fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % (vm.header[i],
-                                                        min_a,
-                                                        q1,
-                                                        med_a,
-                                                        q3,
-                                                        max_a))
+            fo.write(
+                "{},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n".format(
+                    vm.header[i], min_a, q1, med_a, q3, max_a
+                )
+            )
         a = np.array(feat_imp[-1])
         min_a = a.min()
         q1 = np.percentile(a, 25)
         med_a = np.percentile(a, 50)
         q3 = np.percentile(a, 75)
         max_a = a.max()
-        fo.write("%s,%.4f,%.4f,%.4f,%.4f,%.4f\n" % ("qm_voxel_charge",
-                                                    min_a,
-                                                    q1,
-                                                    med_a,
-                                                    q3,
-                                                    max_a))
+        fo.write(
+            "{},{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n".format(
+                "qm_voxel_charge", min_a, q1, med_a, q3, max_a
+            )
+        )
         """
         fo.write("%s,\n" % ("qm_voxel_charge"))
         for j in range(len(feat_imp[-1])-1):
@@ -648,7 +636,7 @@ def cv(db,
         fo.write("%.4f\n" % (feat_imp[-1][-1]))
         """
         fo.close()
-    
+
     ycvp = {}
     for key in predictions.keys():
         if len(predictions[key]) > 0:
@@ -660,90 +648,51 @@ def cv(db,
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--target_csv',
-                   default=None,
-                   type=str,
-                   help='Voxel database')
-    p.add_argument('--desc_csv',
-                   default=None,
-                   type=str,
-                   help='Molecule descriptors')
-    p.add_argument('--db',
-                   default=None,
-                   type=str,
-                   help='DX path')
-    p.add_argument('--regression',
-                   default=True,
-                   type=bool,
-                   help='regression model type')
-    p.add_argument('--classification',
-                   default=False,
-                   type=bool,
-                   help='classification model type')
-    p.add_argument('--mout',
-                   default=None,
-                   type=str,
-                   help='model output')
-    p.add_argument('--epochs',
-                   default=100,
-                   type=int,
-                   help='Number of epochs')
-    p.add_argument('--random_state',
-                   default=123458976,
-                   type=int,
-                   help='Number of epochs')
-    p.add_argument('--n_rot_train',
-                   default=10,
-                   type=int,
-                   help='Number of voxel rotation multiplication for the train. (batch_size = n_rot_train*n_molecules)')
-    p.add_argument('--train_steps_per_epoch',
-                   default=500,
-                   type=int,
-                   help='How many times the voxel data generator with its augmentation is called for the training set)')
-    p.add_argument('--n_rot_validation',
-                   default=5,
-                   type=int,
-                   help='Number of voxel rotation for the validation test')
-    p.add_argument('--val_steps_per_epoch',
-                   default=100,
-                   type=int,
-                   help='How many times the voxel data generator with its augmentation is called for the validation set)')
-    p.add_argument('--nlayers',
-                   default=10,
-                   type=int,
-                   help='Number of dense NN layers')
-    p.add_argument('--nunits',
-                   default=64,
-                   type=int,
-                   help='Number of units in DNN')
-    p.add_argument('--nfilters',
-                   default=16,
-                   type=int,
-                   help='Number of filters for Conv3d')
-    p.add_argument('--cvout',
-                   default=None,
-                   type=str,
-                   help='Run Cross Validation')
-    p.add_argument('--n_splits',
-                   default=5,
-                   type=int,
-                   help='Number of Cross Validation splits')
-    p.add_argument('--n_repeats',
-                   default=20,
-                   type=int,
-                   help='Number of Cross Validation splits')
-    p.add_argument('--cvgroupfile',
-                   default=None,
-                   type=str,
-                   help='Static cross-validation group file')
-    p.add_argument('--tid',
-                   default=None,
-                   type=int,
-                   help='Test Group to use in simple run for model evaluation')
-    p.add_argument('--featimp_out',
-                   default=None,
-                   type=str,
-                   help='Feature Importance output')
+    p.add_argument("--target_csv", default=None, type=str, help="Voxel database")
+    p.add_argument("--desc_csv", default=None, type=str, help="Molecule descriptors")
+    p.add_argument("--db", default=None, type=str, help="DX path")
+    p.add_argument("--regression", default=True, type=bool, help="regression model type")
+    p.add_argument("--classification", default=False, type=bool, help="classification model type")
+    p.add_argument("--mout", default=None, type=str, help="model output")
+    p.add_argument("--epochs", default=100, type=int, help="Number of epochs")
+    p.add_argument("--random_state", default=123458976, type=int, help="Number of epochs")
+    p.add_argument(
+        "--n_rot_train",
+        default=10,
+        type=int,
+        help="Number of voxel rotation multiplication for the train. (batch_size = n_rot_train*n_molecules)",
+    )
+    p.add_argument(
+        "--train_steps_per_epoch",
+        default=500,
+        type=int,
+        help="How many times the voxel data generator with its augmentation is called for the training set)",
+    )
+    p.add_argument(
+        "--n_rot_validation",
+        default=5,
+        type=int,
+        help="Number of voxel rotation for the validation test",
+    )
+    p.add_argument(
+        "--val_steps_per_epoch",
+        default=100,
+        type=int,
+        help="How many times the voxel data generator with its augmentation is called for the validation set)",
+    )
+    p.add_argument("--nlayers", default=10, type=int, help="Number of dense NN layers")
+    p.add_argument("--nunits", default=64, type=int, help="Number of units in DNN")
+    p.add_argument("--nfilters", default=16, type=int, help="Number of filters for Conv3d")
+    p.add_argument("--cvout", default=None, type=str, help="Run Cross Validation")
+    p.add_argument("--n_splits", default=5, type=int, help="Number of Cross Validation splits")
+    p.add_argument("--n_repeats", default=20, type=int, help="Number of Cross Validation splits")
+    p.add_argument(
+        "--cvgroupfile", default=None, type=str, help="Static cross-validation group file"
+    )
+    p.add_argument(
+        "--tid", default=None, type=int, help="Test Group to use in simple run for model evaluation"
+    )
+    p.add_argument("--featimp_out", default=None, type=str, help="Feature Importance output")
     args = p.parse_args(sys.argv[1:])
 
     if args.target_csv is None and args.db is None:
@@ -762,46 +711,56 @@ def main():
         print("--cvout [default None]")
         print("--n_splits [default None]")
         print("--n_repeats [default None]")
-        print("\nUsage simple run test: make3DCNNmodel.py --db Gasteiger_Database_g50_s25/ --target_csv TorusDiolSFC.csv  --epochs 1000 --n_rot_train 4 --train_steps_per_epoch 25 --n_rot_validation 1 --val_steps_per_epoch 5 --nunits 32  --nfilters 8")
-        print("\nUsage model run test example: python ../Code/make3DCNNmodel.py --db OptimisedConformation/--target_csv LogKwActivity.csv  --n_rot_validation 2 --n_rot_train 4 --train_steps_per_epoch 25 --val_steps_per_epoch 5  --epochs 30 --nlayers 13 --mout logKwModel_rt50_rv100_e30_dl13 --cvgroupfile cvgroup.csv --tid 6")
-        print("\nUsage model validation example: python ../Code/make3DCNNmodel.py --db VDatabase_g20_s20_r500 --target_csv LogKwActivity.csv --n_rot_validation 100 --n_rot_train 50 --epochs 30 --nlayers 13 --cvout LogKwValidation.csv --n_repeats 3\n")
+        print(
+            "\nUsage simple run test: make3DCNNmodel.py --db Gasteiger_Database_g50_s25/ --target_csv TorusDiolSFC.csv  --epochs 1000 --n_rot_train 4 --train_steps_per_epoch 25 --n_rot_validation 1 --val_steps_per_epoch 5 --nunits 32  --nfilters 8"
+        )
+        print(
+            "\nUsage model run test example: python ../Code/make3DCNNmodel.py --db OptimisedConformation/--target_csv LogKwActivity.csv  --n_rot_validation 2 --n_rot_train 4 --train_steps_per_epoch 25 --val_steps_per_epoch 5  --epochs 30 --nlayers 13 --mout logKwModel_rt50_rv100_e30_dl13 --cvgroupfile cvgroup.csv --tid 6"
+        )
+        print(
+            "\nUsage model validation example: python ../Code/make3DCNNmodel.py --db VDatabase_g20_s20_r500 --target_csv LogKwActivity.csv --n_rot_validation 100 --n_rot_train 50 --epochs 30 --nlayers 13 --cvout LogKwValidation.csv --n_repeats 3\n"
+        )
     else:
         if args.cvout is not None:
-            cv(args.db,
-               args.target_csv,
-               args.desc_csv,
-               args.n_splits,
-               args.n_repeats,
-               args.epochs,
-               args.n_rot_train,
-               args.train_steps_per_epoch,
-               args.n_rot_validation,
-               args.val_steps_per_epoch,
-               args.nlayers,
-               args.nunits,
-               args.nfilters,
-               args.random_state,
-               args.cvout,
-               args.cvgroupfile,
-               args.featimp_out,
-               False,
-               args.mout)
+            cv(
+                args.db,
+                args.target_csv,
+                args.desc_csv,
+                args.n_splits,
+                args.n_repeats,
+                args.epochs,
+                args.n_rot_train,
+                args.train_steps_per_epoch,
+                args.n_rot_validation,
+                args.val_steps_per_epoch,
+                args.nlayers,
+                args.nunits,
+                args.nfilters,
+                args.random_state,
+                args.cvout,
+                args.cvgroupfile,
+                args.featimp_out,
+                False,
+                args.mout,
+            )
         else:
-            simplerun(args.db,
-                      args.target_csv,
-                      args.desc_csv,
-                      args.epochs,
-                      args.n_rot_train,
-                      args.train_steps_per_epoch,
-                      args.n_rot_validation,
-                      args.val_steps_per_epoch,
-                      args.nlayers,
-                      args.nunits,
-                      args.nfilters,
-                      args.random_state,
-                      args.mout,
-                      args.cvgroupfile,
-                      args.tid)
+            simplerun(
+                args.db,
+                args.target_csv,
+                args.desc_csv,
+                args.epochs,
+                args.n_rot_train,
+                args.train_steps_per_epoch,
+                args.n_rot_validation,
+                args.val_steps_per_epoch,
+                args.nlayers,
+                args.nunits,
+                args.nfilters,
+                args.random_state,
+                args.mout,
+                args.cvgroupfile,
+                args.tid,
+            )
     return 0
 
 

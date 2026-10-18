@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -12,7 +11,7 @@ Most descriptor compounds selection
 import numpy as np
 
 
-class MDC(object):
+class MDC:
     """Perform Most-Descriptor-Compound object selection
     Parameters
     ----------
@@ -52,16 +51,16 @@ class MDC(object):
         self.mdcids = []
 
     def mdclist(self):
-        """ Return the list of most descriptor compounds """
+        """Return the list of most descriptor compounds"""
         return self.mdcids
 
     def getnext(self):
-        """ Get the next most descriptor compound """
+        """Get the next most descriptor compound"""
         self._appendnext()
         return self.mdcids[-1]
 
     def select(self):
-        """ Run the Most Descriptive Compound Selection """
+        """Run the Most Descriptive Compound Selection"""
         stopcondition = True
         while stopcondition:
             self._appendnext()
@@ -89,7 +88,7 @@ class MDC(object):
         return self.mdcids
 
     def _build_infovector(self):
-        """ build the information vector """
+        """build the information vector"""
         row = len(self.dmx_)
         self.info_ = np.zeros(row)
         tmp = np.zeros((row, 2))
@@ -106,11 +105,11 @@ class MDC(object):
                     self.info_[j] += 1
                 else:
                     k = int(tmp[j][1])
-                    self.info_[k] += 1/div
+                    self.info_[k] += 1 / div
                     div += 1.0
 
     def _appendnext(self):
-        """ Append the next most descriptive compound to list """
+        """Append the next most descriptive compound to list"""
         dist = self.info_[0]
         mdc = 0
 
@@ -124,7 +123,7 @@ class MDC(object):
         self.mdcids.append(mdc)
 
     def _rm_mdc_contrib(self):
-        """ remove the most descriptive compound contribution """
+        """remove the most descriptive compound contribution"""
         mdc = self.mdcids[-1]
         row = len(self.dmx_)
         tmp = np.zeros((row, 2))
@@ -139,14 +138,14 @@ class MDC(object):
             if j == mdc:
                 rank[j] = 0.0
             else:
-                rank[j] = 1.0 - (1.0/div)
+                rank[j] = 1.0 - (1.0 / div)
                 div += 1.0
 
         for i in range(row):
             self.info_[i] *= rank[i]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from scipy.spatial.distance import pdist, squareform
     import time
 
@@ -154,11 +153,11 @@ if __name__ == '__main__':
     np.random.seed(N)
     mx = np.random.rand(N, 2)
 
-    dmx = squareform(pdist(mx, 'euclidean'))
+    dmx = squareform(pdist(mx, "euclidean"))
 
     print("Starting Selection")
     t = time.time()
     csel = MDC(dmx)
     idsel = csel.select()
-    print("Time: %.3f" % (time.time()-t))
+    print("Time: %.3f" % (time.time() - t))
     print("Selected %d objects in %d" % (len(idsel), float(N)))

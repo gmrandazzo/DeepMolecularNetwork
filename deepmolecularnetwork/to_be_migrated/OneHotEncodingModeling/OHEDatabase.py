@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use, modify, and distribute it under
@@ -11,8 +10,9 @@ import numpy as np
 from pathlib import Path
 import random
 
+
 def ReadOneHotEncodingCSV(ohe_csv):
-    f = open(ohe_csv, "r")
+    f = open(ohe_csv)
     m = []
     x = []
     for line in f:
@@ -24,8 +24,9 @@ def ReadOneHotEncodingCSV(ohe_csv):
     f.close()
     return np.array(m)
 
+
 def LoadOneHotEncodingCSVDir(ohe_dir):
-    p = Path(ohe_dir).glob('**/*')
+    p = Path(ohe_dir).glob("**/*")
     X = {}
     for x in p:
         if x.is_file() and ".csv" in str(x):
@@ -40,23 +41,24 @@ def LoadOneHotEncodingCSVDir(ohe_dir):
     input_shape = list(X.values())[0].shape[1:]
     return X, input_shape
 
-class DBFile(object):
+
+class DBFile:
     def __init__(self, fname):
         self.fname = Path(str(fname)).absolute()
         self.dbf = None
-    
+
     def getData(self):
         if self.dbf is None:
-            self.dbf = np.load(self.fname,
-                               mmap_mode='r')
+            self.dbf = np.load(self.fname, mmap_mode="r")
             return self.dbf
         else:
             return self.dbf
-    
+
     def get_shape(self):
         return self.getData().shape
 
-class OHEDatabase(object):
+
+class OHEDatabase:
     def __init__(self):
         self.X = None
         self.input_shape = None
@@ -71,7 +73,7 @@ class OHEDatabase(object):
             os.makedirs(dbpath, exist_ok=True)
 
         for key in self.X.keys():
-            fdb = "%s/%s" % (dbpath, key)
+            fdb = f"{dbpath}/{key}"
             np.save(fdb, self.X[key])
 
     def loadOHEdb(self, dbpath):
@@ -85,7 +87,7 @@ class OHEDatabase(object):
             if p.is_file() and ".npy" in str(p):
                 name = p.resolve().stem.split(".")[0]
                 # Loading take too much time...
-                # Hence would be better to load the files while 
+                # Hence would be better to load the files while
                 # the program is executed.
                 # print("Loading %s" % (name))
                 # arr = np.load(str(p),
@@ -98,7 +100,7 @@ class OHEDatabase(object):
         self.ninstances = len(self.X.keys())
         # end = time.time()
         # print("Done!")
-        #print("Elapsed time: %.2f sec" % (end-start))
+        # print("Elapsed time: %.2f sec" % (end-start))
 
     def loadOHEdbFromCSVDir(self, ohe_dir):
         self.X, self.input_shape = LoadOneHotEncodingCSVDir(ohe_dir)

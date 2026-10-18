@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-from __future__ import print_function
 import numpy as np
 
-def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+
+def printProgressBar(iteration, total, prefix="", suffix="", decimals=1, length=100, fill="█"):
     """
     Call in a loop to create terminal progress bar
     @params:
@@ -23,12 +22,13 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     """
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
-    #print '\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix)
+    bar = fill * filledLength + "-" * (length - filledLength)
+    print(f"\r{prefix} |{bar}| {percent}% {suffix}", end="\r")
+    # print '\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix)
     # Print New Line on Complete
     if iteration == total:
         print()
+
 
 def MSE(y_true, y_pred):
     """
@@ -36,8 +36,8 @@ def MSE(y_true, y_pred):
     """
     e = 0.0
     for i in range(len(y_true)):
-        e += np.square(y_pred[i]-y_true[i])
-    return e/float(len(y_true))
+        e += np.square(y_pred[i] - y_true[i])
+    return e / float(len(y_true))
 
 
 def MAE(y_true, y_pred):
@@ -46,11 +46,11 @@ def MAE(y_true, y_pred):
     """
     e = 0.0
     for i in range(len(y_true)):
-        e += np.abs(y_pred[i]-y_true[i])
-    return e/float(len(y_true))
+        e += np.abs(y_pred[i] - y_true[i])
+    return e / float(len(y_true))
 
 
-class FeatureImportance(object):
+class FeatureImportance:
     def __init__(self, model, X, y, featlst, f_perm=None, iterations=20):
         self.model = model
         self.X = X
@@ -99,31 +99,35 @@ class FeatureImportance(object):
         """
         i = 0
         if verbose == 1:
-            printProgressBar(0,
-                             len(self.featlst)*self.iterations,
-                             prefix = 'Feature Importance Progress:',
-                             suffix = 'Complete',
-                             length = 50)
+            printProgressBar(
+                0,
+                len(self.featlst) * self.iterations,
+                prefix="Feature Importance Progress:",
+                suffix="Complete",
+                length=50,
+            )
         FI = {}
         ypred = self.model.predict(self.X)
         e_orig_mse = MAE(list(self.y), list(ypred))
         e_orig_mae = MAE(list(self.y), list(ypred))
         # calculate the feature importance for the descriptors
         for fid_ in range(len(self.featlst)):
-            FI[self.featlst[fid_]] = {'mae': [], 'mse': []}
+            FI[self.featlst[fid_]] = {"mae": [], "mse": []}
             for it in range(self.iterations):
                 x_val_perm = self.FeaturePermutation(self.X, fid=fid_)
                 ypred_perm = self.model.predict(x_val_perm)
                 e_perm_mse = MSE(list(self.y), list(ypred_perm))
                 e_perm_mae = MAE(list(self.y), list(ypred_perm))
-                FI[self.featlst[fid_]]['mae'].append(e_perm_mae/e_orig_mae)
-                FI[self.featlst[fid_]]['mse'].append(e_perm_mse/e_orig_mse)
+                FI[self.featlst[fid_]]["mae"].append(e_perm_mae / e_orig_mae)
+                FI[self.featlst[fid_]]["mse"].append(e_perm_mse / e_orig_mse)
                 if verbose == 1:
-                    printProgressBar(i,
-                                     len(self.featlst)*self.iterations,
-                                     prefix = 'Progress:',
-                                     suffix = 'Complete',
-                                     length = 50)
+                    printProgressBar(
+                        i,
+                        len(self.featlst) * self.iterations,
+                        prefix="Progress:",
+                        suffix="Complete",
+                        length=50,
+                    )
                     i += 1
         return FI
 
@@ -150,17 +154,17 @@ def WriteFeatureImportance(FI, fout):
     fo.write("Min(MAE),Q1(MAE),MED(MAE),Q3(MAE),MAX(MAE)\n")
     for key in FI.keys():
         fo.write("%s," % (key))
-        r_mse = CalcFeatImpFinalResults(FI[key]['mse'])
-        r_mae = CalcFeatImpFinalResults(FI[key]['mae'])
-        fo.write("%.4f,%.4f,%.4f,%.4f,%.4f," % (r_mse[0],
-                                                r_mse[1],
-                                                r_mse[2],
-                                                r_mse[3],
-                                                r_mse[4]))
+        r_mse = CalcFeatImpFinalResults(FI[key]["mse"])
+        r_mae = CalcFeatImpFinalResults(FI[key]["mae"])
+        fo.write(
+            "{:.4f},{:.4f},{:.4f},{:.4f},{:.4f},".format(
+                r_mse[0], r_mse[1], r_mse[2], r_mse[3], r_mse[4]
+            )
+        )
 
-        fo.write("%.4f,%.4f,%.4f,%.4f,%.4f\n" % (r_mae[0],
-                                                 r_mae[1],
-                                                 r_mae[2],
-                                                 r_mae[3],
-                                                 r_mae[4]))
+        fo.write(
+            "{:.4f},{:.4f},{:.4f},{:.4f},{:.4f}\n".format(
+                r_mae[0], r_mae[1], r_mae[2], r_mae[3], r_mae[4]
+            )
+        )
     fo.close()

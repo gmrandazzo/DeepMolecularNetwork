@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepmolecularnetwork"
+version = "0.2.0"
+description = "A deep learning framework for QSAR/QSPR modeling with 3D voxels, tabular descriptors, and molecular representations"
+readme = "README.md"
+authors = [
+    { name = "Giuseppe Marco Randazzo", email = "gmrandazzo@gmail.com" }
+]
+license = { text = "GPL-3.0-or-later" }
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.22.0",
+    "scipy>=1.8.0",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.5.0",
+    "h5py>=3.6.0",
+    "pillow>=9.0.0",
+]
+
+[project.optional-dependencies]
+keras2 = [
+    "tensorflow-cpu>=2.13.0,<2.16.0",
+    "keras>=2.13.0,<3.0.0",
+    "tensorboard>=2.13.0",
+]
+keras3 = [
+    "tensorflow-cpu>=2.16.0",
+    "keras>=3.0.0",
+    "tensorboard>=2.16.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "coverage>=6.0.0",
+]
+dev = [
+    "deepmolecularnetwork[test]",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["deepmolecularnetwork*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]

@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-import sys
-import numpy as np
-from MDC import MDC
-from disc import DISC
-import random
 from datetime import datetime
-import multiprocessing
 from math import ceil
+import random
+import numpy as np
+from deepmolecularnetwork.utility.dissimilar_compound_selection import DISC
+from deepmolecularnetwork.utility.most_descriptive_compound import MDC
 
 
 def MDCTrainTestSplit(dict_target, n_objects=0):
@@ -23,10 +20,10 @@ def MDCTrainTestSplit(dict_target, n_objects=0):
     """
     y = list(dict_target.values())
     keys = list(dict_target.keys())
-    dmx = [[1. for j in range(len(y))] for i in range(len(y))]
+    dmx = [[1.0 for j in range(len(y))] for i in range(len(y))]
     for i in range(len(y)):
-        for j in range(i+1, len(y)):
-            dmx[i][j] = dmx[j][i] = np.sqrt((y[i]-y[j])**2)
+        for j in range(i + 1, len(y)):
+            dmx[i][j] = dmx[j][i] = np.sqrt((y[i] - y[j]) ** 2)
     csel = MDC(dmx, n_objects)
     test_keys = []
     for indx in csel.select():
@@ -47,14 +44,14 @@ def DISCTrainTestSplit(dict_target, n_objects=0):
     """
     y = list(dict_target.values())
     keys = list(dict_target.keys())
-    dmx = [[1. for j in range(len(y))] for i in range(len(y))]
+    dmx = [[1.0 for j in range(len(y))] for i in range(len(y))]
     for i in range(len(y)):
-        for j in range(i+1, len(y)):
-            dmx[i][j] = dmx[j][i] = np.sqrt((y[i]-y[j])**2)
+        for j in range(i + 1, len(y)):
+            dmx[i][j] = dmx[j][i] = np.sqrt((y[i] - y[j]) ** 2)
     csel = None
     if n_objects == 0:
         # Get the 20% of the dataset
-        csel = DISC(dmx, "max", len(keys)*0.2)
+        csel = DISC(dmx, "max", len(keys) * 0.2)
     else:
         csel = DISC(dmx, "max", n_objects)
     test_keys = []
@@ -80,7 +77,7 @@ def TrainTestSplit(keys_, test_size=0.20, random_state=None):
         random.seed(datetime.now().microsecond)
     else:
         random.seed(random_state)
-    nsel = int(np.ceil(n_objects*test_size))
+    nsel = int(np.ceil(n_objects * test_size))
     test_keys = random.sample(keys, nsel)
     train_keys = []
     for key in keys:
@@ -102,11 +99,10 @@ def RepeatedKFold(keys, n_splits=5, n_repeats=20, random_state=None, test_size=0
         rs = 0
 
     for r in range(n_repeats):
-        for subset, test in KFold(keys,
-                                    n_splits,
-                                    rs+r):
-            train, val = TrainTestSplit(subset, test_size, rs+r)
+        for subset, test in KFold(keys, n_splits, rs + r):
+            train, val = TrainTestSplit(subset, test_size, rs + r)
             yield train, val, test
+
 
 def KFold(keys, n_splits, random_state=None):
     if random_state is None:
@@ -116,7 +112,7 @@ def KFold(keys, n_splits, random_state=None):
     indexes = [i for i in range(len(keys))]
     random.shuffle(indexes)
     appgroup = []
-    maxgobj = int(ceil(len(keys)/float(n_splits)))
+    maxgobj = int(ceil(len(keys) / float(n_splits)))
     n = 0
     g = 0
     for i in range(len(keys)):
@@ -138,10 +134,11 @@ def KFold(keys, n_splits, random_state=None):
                 train_keys.append(keys[indexes[k]])
         yield train_keys, test_keys
 
+
 def CVGroupRead(fcvgroup):
     d = {}
     g = 0
-    f = open(fcvgroup, "r")
+    f = open(fcvgroup)
     for line in f:
         d[g] = list(str.split(line.strip(), ","))
         g += 1

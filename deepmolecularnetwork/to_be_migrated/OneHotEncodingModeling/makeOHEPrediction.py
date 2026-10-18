@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -8,14 +7,17 @@
 
 from SMILES2Matrix import SMILES2MX
 import argparse
+
 # from keras.callbacks import Callback, EarlyStopping, TensorBoard
 # from miscfun import exp_pred_plot
 import numpy as np
 import sys
+
 # from sklearn.model_selection import RepeatedKFold
 # from tensorflow import set_random_seed
 import os
 import tensorflow as tf
+
 if int(tf.__version__[0]) > 1:
     from tensorflow.keras import backend as K
 else:
@@ -29,7 +31,8 @@ sys.path.append("%s/../Base" % (dir_path))
 from dmnnio import ReadDescriptors
 from modelhelpers import LoadKerasModels
 
-class ModelPredictor(object):
+
+class ModelPredictor:
     def __init__(self, mpath, smiles, csv_descriptors=None):
         self.mpath = mpath
         self.X, self.input_shape = self.ReadSMILES(smiles)
@@ -74,7 +77,7 @@ class ModelPredictor(object):
 
     def ReadSMILES(self, smiles_list):
         s2m = SMILES2MX(512)
-        f = open(smiles_list, "r")
+        f = open(smiles_list)
         X = {}
         for line in f:
             v = str.split(line.strip(), "\t")
@@ -95,7 +98,7 @@ class ModelPredictor(object):
         return batch_features
 
     def predict(self, pout):
-        
+
         predictions = {}
         for key in self.keys:
             predictions[key] = []
@@ -115,18 +118,14 @@ class ModelPredictor(object):
                 ystdev = np.std(predictions[key])
                 y_min = np.min(predictions[key])
                 y_max = np.max(predictions[key])
-                fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
-                                                    ypavg,
-                                                    ystdev,
-                                                    y_min,
-                                                    y_max))
+                fo.write(f"{key},{ypavg:.4f},{ystdev:.4f},{y_min:.4f},{y_max:.4f}\n")
             else:
                 continue
         fo.close()
         fo = open("all_y_%s" % (pout), "w")
         for key in predictions.keys():
             fo.write("%s," % (key))
-            for i in range(len(predictions[key])-1):
+            for i in range(len(predictions[key]) - 1):
                 fo.write("%.4f," % (predictions[key][i]))
             fo.write("%.4f\n" % (predictions[key][-1]))
         fo.close()
@@ -134,22 +133,10 @@ class ModelPredictor(object):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--smiles',
-                   default=None,
-                   type=str,
-                   help='Smiles molecules')
-    p.add_argument('--desc_csv',
-                   default=None,
-                   type=str,
-                   help='Molecule descriptors')
-    p.add_argument('--minp',
-                   default=None,
-                   type=str,
-                   help='model input')
-    p.add_argument('--pout',
-                   default=None,
-                   type=str,
-                   help='Prediction output')
+    p.add_argument("--smiles", default=None, type=str, help="Smiles molecules")
+    p.add_argument("--desc_csv", default=None, type=str, help="Molecule descriptors")
+    p.add_argument("--minp", default=None, type=str, help="model input")
+    p.add_argument("--pout", default=None, type=str, help="Prediction output")
     args = p.parse_args(sys.argv[1:])
 
     if args.pout is None or args.db is None or args.minp is None:
@@ -158,10 +145,12 @@ def main():
         print("--desc_csv [Molecular descriptors file]")
         print("--minp [keras model out]")
         print("--pout [default None]")
-        print("\nUsage model prediction example: python %s --smiles dataset.smi --desc_csv rdkit.desc.csv --minp model --out output.csv\n" % (sys.argv[0]))
+        print(
+            "\nUsage model prediction example: python %s --smiles dataset.smi --desc_csv rdkit.desc.csv --minp model --out output.csv\n"
+            % (sys.argv[0])
+        )
     else:
-        mp = ModelPredictor(args.minp,
-                            args.desc_csv)
+        mp = ModelPredictor(args.minp, args.desc_csv)
         mp.predict(args.pout)
     return 0
 

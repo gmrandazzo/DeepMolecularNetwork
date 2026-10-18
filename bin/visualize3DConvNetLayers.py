@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -37,29 +36,26 @@ def write_grid_layer(activations, xmin, ymin, zmin, edim, outname):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', default=None, type=str, help='model input')
-    parser.add_argument('--dx', default=None, type=str, help='DX input')
-    parser.add_argument('--edim', default=None,
-                        type=int, help='Voxel edge size')
+    parser.add_argument("--model", default=None, type=str, help="model input")
+    parser.add_argument("--dx", default=None, type=str, help="DX input")
+    parser.add_argument("--edim", default=None, type=int, help="Voxel edge size")
     args = parser.parse_args(sys.argv[1:])
     if args.model is None and args.dx is None:
         print("\nUsage: %s --model [model input] --dx [file dx to predict]\n" % (sys.argv[0]))
-        print("Example usage: ./model/visualize_layer.py --model 5ht1a_human_model --dx DX_lowres/CHEMBL209060.pqr.dx\n")
+        print(
+            "Example usage: ./model/visualize_layer.py --model 5ht1a_human_model --dx DX_lowres/CHEMBL209060.pqr.dx\n"
+        )
     else:
         m = load_model(args.model)
         m.summary()
         x_pred, o, d = readOpenDX(args.dx)
         # prepare the input
-        x_pred = x_pred.reshape(1,
-                                x_pred.shape[0],
-                                x_pred.shape[1],
-                                x_pred.shape[2],
-                                1)
+        x_pred = x_pred.reshape(1, x_pred.shape[0], x_pred.shape[1], x_pred.shape[2], 1)
         # print(x_pred.shape)
         # initialising the model from an input tensor
         # and a list of output tensors
         maxlayer = int(input("Insert the max layer to get:\n"))
-        layer_outputs = [layer.output for layer in m.layers[:int(maxlayer)]]
+        layer_outputs = [layer.output for layer in m.layers[: int(maxlayer)]]
         activation_model = models.Model(input=m.input, output=layer_outputs)
 
         # run the model in prediction mode

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -15,14 +14,8 @@ from DNNDB import AddDNNDatabase, LoadDNNDatabase
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--xmatrix',
-                   default=None,
-                   type=str,
-                   help='Molecular descriptors')
-    p.add_argument('--dbout',
-                   default=None,
-                   type=str,
-                   help='Database output path')
+    p.add_argument("--xmatrix", default=None, type=str, help="Molecular descriptors")
+    p.add_argument("--dbout", default=None, type=str, help="Database output path")
     args = p.parse_args(sys.argv[1:])
 
     if args.xmatrix is None or args.dbout is None:
@@ -31,7 +24,7 @@ def main():
         print("--dbout [Database output path]")
         print("\nUsage: python %s --xmatrix rdkit.desc.csv --dbout rdkitdesc\n" % (sys.argv[0]))
     else:
-        fi = open(args.xmatrix, "r")
+        fi = open(args.xmatrix)
         mx = []
         header = []
         names = []
@@ -47,5 +40,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

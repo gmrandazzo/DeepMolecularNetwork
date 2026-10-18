@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -14,6 +13,7 @@ import random
 from datetime import datetime
 
 import tensorflow as tf
+
 if int(tf.__version__[0]) > 1:
     from tensorflow.keras import optimizers
     from tensorflow.keras.callbacks import Callback
@@ -92,22 +92,16 @@ def example_build_2DData_model(dshape, input_shape2, nfilters, nunits):
     print(input_shape1)
     "Model branch 1"
     in1 = Input(shape=input_shape1)
-    m1 = Conv2D(nfilters,
-                kernel_size=(1, 6),
-                strides=(1, 2))(in1)
-    m1 = Activation('relu')(m1)
-    m1 = Conv2D(nfilters,
-                kernel_size=(1, 6),
-                strides=(1, 2))(m1)
-    m1 = Activation('relu')(m1)
+    m1 = Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 2))(in1)
+    m1 = Activation("relu")(m1)
+    m1 = Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 2))(m1)
+    m1 = Activation("relu")(m1)
     m1 = AveragePooling2D(pool_size=(1, 2))(m1)
 
     # Add 4 time the same convolution
     for i in range(4):
-        m1 = Conv2D(nfilters,
-                    kernel_size=(1, 6),
-                    strides=(1, 1))(m1)
-        m1 = Activation('relu')(m1)
+        m1 = Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 1))(m1)
+        m1 = Activation("relu")(m1)
     m1 = AveragePooling2D(pool_size=(1, 3))(m1)
     m1 = Dropout(0.3)(m1)
     m1 = Flatten()(m1)
@@ -118,7 +112,7 @@ def example_build_2DData_model(dshape, input_shape2, nfilters, nunits):
         m1 = Activation("relu")(m1)
     """
     "Model branch 2"
-    in2 = Input(shape=(input_shape2, ))
+    in2 = Input(shape=(input_shape2,))
     m2 = Dense(nunits)(in2)
     m2 = Activation("relu")(m2)
     m2 = Dense(nunits)(m2)
@@ -141,8 +135,7 @@ def example_build_2DData_model(dshape, input_shape2, nfilters, nunits):
     out = Dense(1)(out)
 
     fmodel = Model([in1, in2], out)
-    fmodel.compile(optimizer=optimizers.Adam(lr=0.00001),
-                   loss='mse', metrics=['mse', 'mae'])
+    fmodel.compile(optimizer=optimizers.Adam(lr=0.00001), loss="mse", metrics=["mse", "mae"])
     return fmodel
 
 
@@ -152,53 +145,29 @@ def example_build_model(dshape, nfilters, nunits):
     model = Sequential()
     # model.add(BatchNormalization(input_shape=input_shape_))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 4),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 4), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 2),
-                     strides=(1, 1),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 2), strides=(1, 1), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
     """
     model.add(Conv2D(4*nfilters,
@@ -211,11 +180,11 @@ def example_build_model(dshape, nfilters, nunits):
     model.add(Dropout(0.3))
     model.add(Flatten())
     model.add(Dense(nunits))
-    model.add(Activation('relu'))
+    model.add(Activation("relu"))
     model.add(Dense(nunits))
-    model.add(Activation('relu'))
+    model.add(Activation("relu"))
     model.add(Dense(nunits))
-    model.add(Activation('relu'))
+    model.add(Activation("relu"))
     """
     model.add(Dense(nunits))
     model.add(Activation('relu'))
@@ -223,8 +192,7 @@ def example_build_model(dshape, nfilters, nunits):
     model.add(Dense(1))
     # Compile model
     # model.compile(loss='mse', optimizer='adam', metrics=['mse', 'mae'])
-    model.compile(optimizer=optimizers.Adam(),
-                  loss='mse', metrics=['mse', 'mae'])
+    model.compile(optimizer=optimizers.Adam(), loss="mse", metrics=["mse", "mae"])
     # model.compile(loss='mse', optimizer='rmsprop', metrics=['mse', 'mae'])
     # model.compile(loss='mse', optimizer='nadam', metrics=['mse', 'mae'])
     # , rmse])
@@ -257,38 +225,25 @@ def build_gridsearch_model(dshape, n_conv, nfilters, ndense_layers, nunits):
     model.add(Activation('relu'))
     """
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 2),
-                     input_shape=input_shape_))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 2), input_shape=input_shape_))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 2)))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 2)))
+    model.add(Activation("relu"))
 
     model.add(AveragePooling2D(pool_size=(1, 2)))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 1)))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 1)))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 1)))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 1)))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 1)))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 1)))
+    model.add(Activation("relu"))
 
-    model.add(Conv2D(nfilters,
-                     kernel_size=(1, 6),
-                     strides=(1, 1)))
-    model.add(Activation('relu'))
+    model.add(Conv2D(nfilters, kernel_size=(1, 6), strides=(1, 1)))
+    model.add(Activation("relu"))
 
     model.add(AveragePooling2D(pool_size=(1, 3)))
 
@@ -297,18 +252,16 @@ def build_gridsearch_model(dshape, n_conv, nfilters, ndense_layers, nunits):
     model.add(Flatten())
     for i in range(ndense_layers):
         model.add(Dense(nunits))
-        model.add(Activation('relu'))
+        model.add(Activation("relu"))
         model.add(Dropout(0.1))
 
     model.add(Dense(1))
     # Compile model
-    model.compile(loss=score,
-                  optimizer=optimizers.Adam(lr=0.0001),
-                  metrics=[score, 'mse', 'mae'])
+    model.compile(loss=score, optimizer=optimizers.Adam(lr=0.0001), metrics=[score, "mse", "mae"])
     return model
 
 
-class NNTrain(object):
+class NNTrain:
     def __init__(self, ohedb_path, target, dx=None, n_descs=None):
         self.db = OHEDatabase()
         self.db.loadOHEdb(ohedb_path)
@@ -324,7 +277,7 @@ class NNTrain(object):
         self.verbose = 1
 
     def DataGenerator(self, keys, batch_size_=200):
-        """ to be used with fit_generator and steps_per_epoch"""
+        """to be used with fit_generator and steps_per_epoch"""
         if self.dx is not None:
             keylst = list(set(list(self.db.X.keys())).intersection(list(self.target.keys())))
             keylst = list(set(keylst).intersection(list(self.dx.keys())))
@@ -344,7 +297,7 @@ class NNTrain(object):
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
-                            k = random.randint(0, smiohes_size-1)
+                            k = random.randint(0, smiohes_size - 1)
                             smiohe = smiohes[k]
                         else:
                             smiohe = smiohes[0]
@@ -355,7 +308,9 @@ class NNTrain(object):
                         batch_x_bh2.append(cfeat)
                     batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
                     batch_x_bh2 = np.array(batch_x_bh2)
-                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float) 
+                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(
+                        batch_y
+                    ).astype(float)
             else:
                 # Random selection several time...
                 while True:
@@ -364,14 +319,14 @@ class NNTrain(object):
                     batch_x_bh2 = []
                     batch_y = []
                     for i in range(batch_size_):
-                        indx = random.randint(0, size_tkeys-1)
+                        indx = random.randint(0, size_tkeys - 1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
                         smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
-                            k = random.randint(0, smiohes_size-1)
+                            k = random.randint(0, smiohes_size - 1)
                             smiohe = smiohes[k]
                         else:
                             smiohe = smiohes[0]
@@ -382,7 +337,9 @@ class NNTrain(object):
                         batch_x_bh2.append(cfeat)
                     batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
                     batch_x_bh2 = np.array(batch_x_bh2)
-                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float)
+                    yield [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(
+                        batch_y
+                    ).astype(float)
         else:
             keylst = list(set(list(self.db.X.keys())).intersection(list(self.target.keys())))
             keylst = list(set(keylst).intersection(keys))
@@ -399,7 +356,7 @@ class NNTrain(object):
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
-                            k = random.randint(0, smiohes_size-1)
+                            k = random.randint(0, smiohes_size - 1)
                             smiohe = smiohes[k]
                         else:
                             smiohe = smiohes[0]
@@ -413,14 +370,14 @@ class NNTrain(object):
                     batch_x = []
                     batch_y = []
                     for i in range(batch_size_):
-                        indx = random.randint(0, size_tkeys-1)
+                        indx = random.randint(0, size_tkeys - 1)
                         key_ = keylst[indx]
                         tval = self.target[key_]
                         smiohes = self.db.X[key_].getData()
                         smiohes_size = len(smiohes)
                         smiohe = None
                         if smiohes_size > 1:
-                            k = random.randint(0, smiohes_size-1)
+                            k = random.randint(0, smiohes_size - 1)
                             smiohe = smiohes[k]
                         else:
                             smiohe = smiohes[0]
@@ -444,7 +401,7 @@ class NNTrain(object):
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:
-                        k = random.randint(0, smiohes_size-1)
+                        k = random.randint(0, smiohes_size - 1)
                         smiohe = smiohes[k]
                     else:
                         smiohe = smiohes[0]
@@ -455,7 +412,11 @@ class NNTrain(object):
                     print("Molecule %s not found" % (key))
             batch_x_bh1 = np.array(batch_x_bh1)[:, :, :, np.newaxis]
             batch_x_bh2 = np.array(batch_x_bh2)
-            return [batch_x_bh1.astype(float), batch_x_bh2.astype(float)], np.array(batch_y).astype(float), ret_keys
+            return (
+                [batch_x_bh1.astype(float), batch_x_bh2.astype(float)],
+                np.array(batch_y).astype(float),
+                ret_keys,
+            )
         else:
             ret_keys = []
             batch_features = []
@@ -467,7 +428,7 @@ class NNTrain(object):
                     smiohes_size = len(smiohes)
                     smiohe = None
                     if smiohes_size > 1:
-                        k = random.randint(0, smiohes_size-1)
+                        k = random.randint(0, smiohes_size - 1)
                         smiohe = smiohes[k]
                     else:
                         smiohe = smiohes[0]
@@ -486,48 +447,36 @@ class NNTrain(object):
             batch_features = np.array(batch_features)[:, :, :, np.newaxis]
             return batch_features.astype(float), np.array(batch_target).astype(float), ret_keys
 
-    def simplerun(self,
-                  batch_size_,
-                  num_epochs,
-                  steps_per_epoch_,
-                  nfilters,
-                  nunits,
-                  random_state,
-                  mout=None):
+    def simplerun(
+        self, batch_size_, num_epochs, steps_per_epoch_, nfilters, nunits, random_state, mout=None
+    ):
         print("N. instances: %d" % (len(self.target)))
-        
+
         ttfn = GetTrainTestFnc()
         if ttfn is None:
             ttfn = TrainTestSplit
         else:
             print("Using custom train/test split function")
-            
-        train_keys, test_keys = ttfn(list(self.target.keys()),
-                                     test_size=0.20,
-                                     random_state=random_state)
-        
-        print("Train set size: %d Test set size %d" % (len(train_keys),
-                                                       len(test_keys)))
+
+        train_keys, test_keys = ttfn(
+            list(self.target.keys()), test_size=0.20, random_state=random_state
+        )
+
+        print("Train set size: %d Test set size %d" % (len(train_keys), len(test_keys)))
         model = None
         model_ = GetKerasModel()
 
         if self.dx is not None:
             print("Number of descriptors: %d" % (self.n_descs))
             if model_ is None:
-                model = example_build_2DData_model(self.db.input_shape,
-                                                   self.n_descs,
-                                                   nfilters,
-                                                   nunits)
+                model = example_build_2DData_model(
+                    self.db.input_shape, self.n_descs, nfilters, nunits
+                )
             else:
-                model = model_(self.db.input_shape,
-                               self.n_descs,
-                               nfilters,
-                               nunits)
+                model = model_(self.db.input_shape, self.n_descs, nfilters, nunits)
         else:
             if model_ is None:
-                model = example_build_model(self.db.input_shape,
-                                            nfilters,
-                                            nunits)
+                model = example_build_model(self.db.input_shape, nfilters, nunits)
             else:
                 model = model_(self.db.input_shape, nfilters, nunits)
 
@@ -548,17 +497,13 @@ class NNTrain(object):
         else:
             b = batch_size_
 
-        name = "#b%d_#e%d_#u%d_#f%d_" % (b,
-                                         num_epochs,
-                                         nunits,
-                                         nfilters)
+        name = "#b%d_#e%d_#u%d_#f%d_" % (b, num_epochs, nunits, nfilters)
         name += time.strftime("%Y%m%d%H%M%S")
-        log_dir_ = ("./logs/%s" % (name))
+        log_dir_ = "./logs/%s" % (name)
 
-        callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                  histogram_freq=0,
-                                  write_graph=False,
-                                  write_images=False)]
+        callbacks_ = [
+            TensorBoard(log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False)
+        ]
         """
         callbacks_ = [TensorBoard(log_dir=log_dir_,
                                   histogram_freq=0,
@@ -570,17 +515,19 @@ class NNTrain(object):
                                     verbose=0,
                                     mode='auto')]
         """
-        #train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
+        # train_steps_per_epoch = int(np.ceil(len(train_keys)/float(batch_size_)))
         train_generator = self.DataGenerator(train_keys, batch_size_)
-        model.fit_generator(train_generator,
-                            steps_per_epoch=steps_per_epoch_,
-                            epochs=num_epochs,
-                            verbose=1,
-                            validation_data=(x_test, y_test),
-                            # validation_data=test_generator,
-                            # validation_steps=test_steps_per_epoch,
-                            callbacks=callbacks_,
-                            use_multiprocessing=True)
+        model.fit_generator(
+            train_generator,
+            steps_per_epoch=steps_per_epoch_,
+            epochs=num_epochs,
+            verbose=1,
+            validation_data=(x_test, y_test),
+            # validation_data=test_generator,
+            # validation_steps=test_steps_per_epoch,
+            callbacks=callbacks_,
+            use_multiprocessing=True,
+        )
         """
         model.fit(x_train, y_train,
                   epochs=num_epochs,
@@ -595,9 +542,9 @@ class NNTrain(object):
         if ypred_test.shape[1] > 1:
             for i in range(len(rtest_keys)):
                 fo.write("%s," % (rtest_keys[i]))
-                for j in range(len(y_test[i])-1):
-                    fo.write("%f,%f," % (y_test[i][j], ypred_test[i][j]))
-                fo.write("%f,%f\n" % (y_test[i][-1], ypred_test[i][-1]))
+                for j in range(len(y_test[i]) - 1):
+                    fo.write(f"{y_test[i][j]:f},{ypred_test[i][j]:f},")
+                fo.write(f"{y_test[i][-1]:f},{ypred_test[i][-1]:f}\n")
             fo.close()
             # Then calculate R2 and Q2 for each output...
             for j in range(ypred_test.shape[1]):
@@ -610,37 +557,42 @@ class NNTrain(object):
                     yrecalc_.append(yrecalc[i][j])
                     y_test_.append(y_test[i][j])
                     ypred_test_.append(ypred_test[i][j])
-                print("Output %d R2: %.4f Q2: %.4f" % (j,
-                                                       r2_score(y_train_, yrecalc_),
-                                                       r2_score(y_test_, ypred_test_)))
+                print(
+                    "Output %d R2: %.4f Q2: %.4f"
+                    % (j, r2_score(y_train_, yrecalc_), r2_score(y_test_, ypred_test_))
+                )
         else:
             for i in range(len(rtest_keys)):
                 fo.write("%s," % (rtest_keys[i]))
                 for j in range(len(y_test[i])):
-                    fo.write("%f,%f" % (y_test[i],
-                                        ypred_test[i]))
+                    fo.write(f"{y_test[i]:f},{ypred_test[i]:f}")
                 fo.write("\n")
             fo.close()
-            print("R2: %.4f Q2: %.4f" % (r2_score(y_train, yrecalc),
-                                         r2_score(y_test, ypred_test)))
+            print(
+                "R2: {:.4f} Q2: {:.4f}".format(
+                    r2_score(y_train, yrecalc), r2_score(y_test, ypred_test)
+                )
+            )
 
-    def runcv(self,
-              batch_size_,
-              num_epochs,
-              steps_per_epoch_,
-              nfilters,
-              nunits,
-              random_state,
-              cvout,
-              n_splits=5,
-              n_repeats=10,
-              mout=None):
+    def runcv(
+        self,
+        batch_size_,
+        num_epochs,
+        steps_per_epoch_,
+        nfilters,
+        nunits,
+        random_state,
+        cvout,
+        n_splits=5,
+        n_repeats=10,
+        mout=None,
+    ):
         print("N. instances: %d" % (len(self.target)))
 
         mout_path = None
         if mout is not None:
             # Utilised to store the out path
-            mout_path = Path("%s_%s" % (time.strftime("%Y%m%d%H%M%S"), mout))
+            mout_path = Path("{}_{}".format(time.strftime("%Y%m%d%H%M%S"), mout))
             mout_path.mkdir()
             # Save the descriptor order
             """
@@ -658,14 +610,13 @@ class NNTrain(object):
             predictions[key] = []
             recalc[key] = []
 
-        for train_keys, val_keys, test_keys in RepeatedKFold(list(self.target.keys()),
-                                                             n_splits,
-                                                             n_repeats,
-                                                             random_state=random_state,
-                                                             test_size=0.2):
-            print("Train set size: %d Val set size %d Test set size: %d" % (len(train_keys),
-                                                                            len(val_keys),
-                                                                            len(test_keys)))
+        for train_keys, val_keys, test_keys in RepeatedKFold(
+            list(self.target.keys()), n_splits, n_repeats, random_state=random_state, test_size=0.2
+        ):
+            print(
+                "Train set size: %d Val set size %d Test set size: %d"
+                % (len(train_keys), len(val_keys), len(test_keys))
+            )
             x_train, y_train, rtrain_keys = self.GenData(train_keys)
             x_val, y_val, rval_keys = self.GenData(val_keys)
             x_test, y_test, rtest_keys = self.GenData(test_keys)
@@ -677,24 +628,16 @@ class NNTrain(object):
             if self.dx is not None:
                 print("Number of descriptors: %d" % (self.n_descs))
                 if model_ is None:
-                    model = example_build_2DData_model(self.db.input_shape,
-                                                       self.n_descs,
-                                                       nfilters,
-                                                       nunits)
+                    model = example_build_2DData_model(
+                        self.db.input_shape, self.n_descs, nfilters, nunits
+                    )
                 else:
-                    model = model_(self.db.input_shape,
-                                   self.n_descs,
-                                   nfilters,
-                                   nunits)
+                    model = model_(self.db.input_shape, self.n_descs, nfilters, nunits)
             else:
                 if model_ is None:
-                    model = example_build_model(self.db.input_shape,
-                                                nfilters,
-                                                nunits)
+                    model = example_build_model(self.db.input_shape, nfilters, nunits)
                 else:
-                    model = model_(self.db.input_shape,
-                                   nfilters,
-                                   nunits)
+                    model = model_(self.db.input_shape, nfilters, nunits)
 
             print(model.summary())
             dname = cvout.replace(".csv", "")
@@ -704,43 +647,41 @@ class NNTrain(object):
             else:
                 b = batch_size_
 
-            name = "cv%d_%s_#b%d_#e%d_#u%d_#f%d_" % (cv_,
-                                                     dname,
-                                                     b,
-                                                     num_epochs,
-                                                     nunits,
-                                                     nfilters)
+            name = "cv%d_%s_#b%d_#e%d_#u%d_#f%d_" % (cv_, dname, b, num_epochs, nunits, nfilters)
             name += time.strftime("%Y%m%d%H%M%S")
-            log_dir_ = ("./logs/%s" % (name))
+            log_dir_ = "./logs/%s" % (name)
 
             model_output = None
             if mout_path is not None:
                 model_output = "%s/%d.h5" % (str(mout_path.absolute()), cv_)
             if model_output is None:
-                callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                          histogram_freq=0,
-                                          write_graph=False,
-                                          write_images=False)]
+                callbacks_ = [
+                    TensorBoard(
+                        log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False
+                    )
+                ]
             else:
-                callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                          histogram_freq=0,
-                                          write_graph=False,
-                                          write_images=False),
-                              ModelCheckpoint(model_output,
-                                              monitor='val_loss',
-                                              verbose=0,
-                                              save_best_only=True)]
+                callbacks_ = [
+                    TensorBoard(
+                        log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False
+                    ),
+                    ModelCheckpoint(
+                        model_output, monitor="val_loss", verbose=0, save_best_only=True
+                    ),
+                ]
 
             train_generator = self.DataGenerator(train_keys, batch_size_)
-            model.fit_generator(train_generator,
-                                steps_per_epoch=steps_per_epoch_,
-                                epochs=num_epochs,
-                                verbose=1,
-                                validation_data=(x_val, y_val),
-                                # validation_data=test_generator,
-                                # validation_steps=test_steps_per_epoch,
-                                callbacks=callbacks_,
-                                use_multiprocessing=True)
+            model.fit_generator(
+                train_generator,
+                steps_per_epoch=steps_per_epoch_,
+                epochs=num_epochs,
+                verbose=1,
+                validation_data=(x_val, y_val),
+                # validation_data=test_generator,
+                # validation_steps=test_steps_per_epoch,
+                callbacks=callbacks_,
+                use_multiprocessing=True,
+            )
             """
             model.fit(x_train, y_train,
                       epochs=num_epochs,
@@ -751,8 +692,7 @@ class NNTrain(object):
                       callbacks=callbacks_)
             """
             # WARNING Implement cross validation results for multiple outputs
-            bestmodel = load_model(model_output,
-                                   custom_objects={"score": score})
+            bestmodel = load_model(model_output, custom_objects={"score": score})
             yrecalc = bestmodel.predict(x_train)
             for i in range(len(yrecalc)):
                 recalc[train_keys[i]].append(list(yrecalc[i]))
@@ -777,7 +717,7 @@ class NNTrain(object):
             cv_ += 1
 
         WriteCrossValidationOutput(cvout, self.target, predictions, recalc)
-       
+
     def runloo(self, batch_size_, num_epochs, ndense_layers, nunits, cvout):
         print("N. instances: %d" % (len(self.target)))
         predictions = dict()
@@ -799,13 +739,9 @@ class NNTrain(object):
             model = None
             model_ = GetKerasModel()
             if model_ is None:
-                model = example_build_model(self.nfeatures,
-                                            nunits,
-                                            ndense_layers)
+                model = example_build_model(self.nfeatures, nunits, ndense_layers)
             else:
-                model = model_(self.nfeatures,
-                               nunits,
-                               ndense_layers)
+                model = model_(self.nfeatures, nunits, ndense_layers)
 
             print(model.summary())
             b = 0
@@ -813,17 +749,20 @@ class NNTrain(object):
                 b = len(x_test)
             else:
                 b = batch_size_
-            log_dir_ = ("./logs/%s_#b%d_#e%d_#u%d_#dl%d_" % (val_key,
-                                                             b,
-                                                             num_epochs,
-                                                             nunits,
-                                                             ndense_layers))
+            log_dir_ = "./logs/%s_#b%d_#e%d_#u%d_#dl%d_" % (
+                val_key,
+                b,
+                num_epochs,
+                nunits,
+                ndense_layers,
+            )
             log_dir_ += time.strftime("%Y%m%d%H%M%S")
 
-            callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                      histogram_freq=0,
-                                      write_graph=False,
-                                      write_images=False)]
+            callbacks_ = [
+                TensorBoard(
+                    log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False
+                )
+            ]
             """
             callbacks_ = [TensorBoard(log_dir=log_dir_,
                                       histogram_freq=0,
@@ -836,34 +775,31 @@ class NNTrain(object):
                                         mode='auto')]
             """
 
-            model.fit(x_train, y_train,
-                      epochs=num_epochs,
-                      batch_size=b,
-                      verbose=1,
-                      validation_data=(x_test, y_test),
-                      callbacks=callbacks_)
+            model.fit(
+                x_train,
+                y_train,
+                epochs=num_epochs,
+                batch_size=b,
+                verbose=1,
+                validation_data=(x_test, y_test),
+                callbacks=callbacks_,
+            )
 
             predictions[val_key] = model.predict(x_test)[0]
 
         fo = open(cvout, "w")
         for key in predictions.keys():
-            fo.write("%s,%.4f,%.4f\n" % (key,
-                                         self.target[key],
-                                         predictions[key]))
+            fo.write(f"{key},{self.target[key]:.4f},{predictions[key]:.4f}\n")
         fo.close()
 
-    def GridSearch(self,
-                   batch_size_,
-                   steps_per_epoch_,
-                   num_epochs,
-                   random_state,
-                   gmout="GridSearchResult"):
+    def GridSearch(
+        self, batch_size_, steps_per_epoch_, num_epochs, random_state, gmout="GridSearchResult"
+    ):
 
-        train_keys, test_keys = TrainTestSplit(list(self.target.keys()),
-                                               test_size=0.20,
-                                               random_state=random_state)
-        print("Train set size: %d Test set size %d" % (len(train_keys),
-                                                       len(test_keys)))
+        train_keys, test_keys = TrainTestSplit(
+            list(self.target.keys()), test_size=0.20, random_state=random_state
+        )
+        print("Train set size: %d Test set size %d" % (len(train_keys), len(test_keys)))
 
         # train_steps_per_epoch = ceil(len(train_keys)/float(batch_size_))
         # train_generator = self.DataGenerator(train_keys, batch_size_)
@@ -889,7 +825,7 @@ class NNTrain(object):
 
         # resnet architecture
         param = {}
-        param["nunits"] = [200, 400,  600, 800]
+        param["nunits"] = [200, 400, 600, 800]
         param["ndense_layers"] = [2, 4, 6, 8]
 
         all_combo = list(ParameterGrid(param))
@@ -897,7 +833,7 @@ class NNTrain(object):
 
         already_computed_combo = []
         if Path(gmout).is_file():
-            fi = open(gmout, "r")
+            fi = open(gmout)
             for line in fi:
                 v = str.split(line.strip(), " ")
                 """
@@ -911,7 +847,7 @@ class NNTrain(object):
                 # resnet architecture
                 units = v[0]
                 layers = v[1]
-                s = ("%s-%s" % (units, layers))
+                s = f"{units}-{layers}"
                 already_computed_combo.append(s)
             fi.close()
         model_ = GetKerasModel()
@@ -924,7 +860,7 @@ class NNTrain(object):
                                   c["dropout"]))
             """
             # resnet architecture
-            s = ("%s-%s" % (c["nunits"], c["ndense_layers"]))
+            s = "{}-{}".format(c["nunits"], c["ndense_layers"])
             if s in already_computed_combo:
                 print("%s already computed... skip..." % (s))
             else:
@@ -936,13 +872,9 @@ class NNTrain(object):
                                               c["dropout"])
                 """
                 if model_ is None:
-                    model = example_build_model(self.nfeatures,
-                                                c["nunits"],
-                                                c["ndense_layers"])
+                    model = example_build_model(self.nfeatures, c["nunits"], c["ndense_layers"])
                 else:
-                    model = model_(self.nfeatures,
-                                   c["nunits"],
-                                   c["ndense_layers"])
+                    model = model_(self.nfeatures, c["nunits"], c["ndense_layers"])
 
                 """
                 model = build_dnn_resnet_model(self.nfeatures,
@@ -961,23 +893,25 @@ class NNTrain(object):
                                                                     c["dropout"]))
                 """
 
-                model_name = ("#b%d_#e%d_#u%d_#dl%d" % (b,
-                                                        num_epochs,
-                                                        c["nunits"],
-                                                        c["ndense_layers"]))
-                log_dir_ = ("./logs/%s" % (model_name))
+                model_name = "#b%d_#e%d_#u%d_#dl%d" % (
+                    b,
+                    num_epochs,
+                    c["nunits"],
+                    c["ndense_layers"],
+                )
+                log_dir_ = "./logs/%s" % (model_name)
 
                 log_dir_ += time.strftime("%Y%m%d%H%M%S")
 
                 model_output = "%s.h5" % (model_name)
-                callbacks_ = [TensorBoard(log_dir=log_dir_,
-                                          histogram_freq=0,
-                                          write_graph=False,
-                                          write_images=False),
-                              ModelCheckpoint(model_output,
-                                              monitor='val_loss',
-                                              verbose=0,
-                                              save_best_only=True)]
+                callbacks_ = [
+                    TensorBoard(
+                        log_dir=log_dir_, histogram_freq=0, write_graph=False, write_images=False
+                    ),
+                    ModelCheckpoint(
+                        model_output, monitor="val_loss", verbose=0, save_best_only=True
+                    ),
+                ]
                 """
                 callbacks_ = [TensorBoard(log_dir=log_dir_,
                                           histogram_freq=0,
@@ -990,16 +924,18 @@ class NNTrain(object):
                                             mode='auto')]
                 """
 
-                model.fit(x_train, y_train,
-                          epochs=num_epochs,
-                          batch_size=b,
-                          steps_per_epoch=steps_per_epoch_,
-                          verbose=self.verbose,
-                          validation_data=(x_test, y_test),
-                          callbacks=callbacks_)
+                model.fit(
+                    x_train,
+                    y_train,
+                    epochs=num_epochs,
+                    batch_size=b,
+                    steps_per_epoch=steps_per_epoch_,
+                    verbose=self.verbose,
+                    validation_data=(x_test, y_test),
+                    callbacks=callbacks_,
+                )
 
-                bestmodel = load_model(model_output,
-                                       custom_objects={"score": score})
+                bestmodel = load_model(model_output, custom_objects={"score": score})
 
                 yrecalc_train = bestmodel.predict(x_train)
 
@@ -1031,7 +967,11 @@ class NNTrain(object):
                 mae_test = mae(y_test, ypred_test)
                 train_score = LOGMAE(y_train, yrecalc_train)
                 test_score = LOGMAE(y_test, ypred_test)
-                print("R2: %.4f Train Score: %f Q2: %.4f Test Score: %f" % (r2, train_score, q2, test_score))
+                print(
+                    "R2: {:.4f} Train Score: {:f} Q2: {:.4f} Test Score: {:f}".format(
+                        r2, train_score, q2, test_score
+                    )
+                )
 
                 fo = open("%s" % (gmout), "a")
                 """
@@ -1050,54 +990,48 @@ class NNTrain(object):
                                                                     test_score))
                 """
                 # resnet architecture
-                fo.write("%d %d %f %f %f %f %f %f %f %f\n" % (c["nunits"],
-                                                              c["ndense_layers"],
-                                                              mse_train,
-                                                              mae_train,
-                                                              r2,
-                                                              train_score,
-                                                              mse_test,
-                                                              mae_test,
-                                                              q2,
-                                                              test_score))
+                fo.write(
+                    "%d %d %f %f %f %f %f %f %f %f\n"
+                    % (
+                        c["nunits"],
+                        c["ndense_layers"],
+                        mse_train,
+                        mae_train,
+                        r2,
+                        train_score,
+                        mse_test,
+                        mae_test,
+                        q2,
+                        test_score,
+                    )
+                )
                 fo.close()
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ohedir', default=None,
-                        type=str, help='One-Hot-Encoding directory files')
-    parser.add_argument('--xmatrix', default=None,
-                        type=str, help='input data matrix')
-    parser.add_argument('--ytarget', default=None,
-                        type=str, help='input data matrix')
-    parser.add_argument('--epochs', default=500, type=int,
-                        help='Number of epochs')
-    parser.add_argument('--batch_size', default=100, type=int,
-                        help='Batch size')
-    parser.add_argument('--random_state', default=123458976, type=int,
-                        help='Random state')
-    parser.add_argument('--steps_per_epoch', default=20, type=int,
-                        help='Steps per epochs')
-    parser.add_argument('--n_splits', default=5, type=int,
-                        help='Number of kfold splits')
-    parser.add_argument('--n_repeats', default=20, type=int,
-                        help='Number of repetitions')
-    parser.add_argument('--cvout', default=None, type=str,
-                        help='Cross validation output')
-    parser.add_argument('--nfilters', default=16, type=int,
-                        help='Number of neurons')
-    parser.add_argument('--nunits', default=32, type=int,
-                        help='Number of neurons')
-    parser.add_argument('--ndense_layers', default=1, type=int,
-                        help='Number of dense layers')
-    parser.add_argument('--mout', default=None, type=str,
-                        help='Model out path')
+    parser.add_argument("--ohedir", default=None, type=str, help="One-Hot-Encoding directory files")
+    parser.add_argument("--xmatrix", default=None, type=str, help="input data matrix")
+    parser.add_argument("--ytarget", default=None, type=str, help="input data matrix")
+    parser.add_argument("--epochs", default=500, type=int, help="Number of epochs")
+    parser.add_argument("--batch_size", default=100, type=int, help="Batch size")
+    parser.add_argument("--random_state", default=123458976, type=int, help="Random state")
+    parser.add_argument("--steps_per_epoch", default=20, type=int, help="Steps per epochs")
+    parser.add_argument("--n_splits", default=5, type=int, help="Number of kfold splits")
+    parser.add_argument("--n_repeats", default=20, type=int, help="Number of repetitions")
+    parser.add_argument("--cvout", default=None, type=str, help="Cross validation output")
+    parser.add_argument("--nfilters", default=16, type=int, help="Number of neurons")
+    parser.add_argument("--nunits", default=32, type=int, help="Number of neurons")
+    parser.add_argument("--ndense_layers", default=1, type=int, help="Number of dense layers")
+    parser.add_argument("--mout", default=None, type=str, help="Model out path")
 
     args = parser.parse_args(argv[1:])
     if args.ohedir is None or args.ytarget is None:
         print("ERROR! Please specify input ohe directory and a target to train!")
-        print("\n Usage: %s --ohedir [input file] --xmatrix [optinal csv descriptors] --ytarget [input file] --epochs [int] --batch_size [int] --nunits [int] --nfilters [int]\n\n" % (argv[0]))
+        print(
+            "\n Usage: %s --ohedir [input file] --xmatrix [optinal csv descriptors] --ytarget [input file] --epochs [int] --batch_size [int] --nunits [int] --nfilters [int]\n\n"
+            % (argv[0])
+        )
     else:
         # fix random seed for reproducibility
         seed = 7
@@ -1133,24 +1067,28 @@ def main():
         nn = NNTrain(args.ohedir, target, dx, n_descs)
         if args.cvout is None:
             nn.verbose = 1
-            nn.simplerun(args.batch_size,
-                         args.epochs,
-                         args.steps_per_epoch,
-                         args.nfilters,
-                         args.nunits,
-                         args.random_state,
-                         args.mout)
+            nn.simplerun(
+                args.batch_size,
+                args.epochs,
+                args.steps_per_epoch,
+                args.nfilters,
+                args.nunits,
+                args.random_state,
+                args.mout,
+            )
         else:
-            nn.runcv(args.batch_size,
-                     args.epochs,
-                     args.steps_per_epoch,
-                     args.nfilters,
-                     args.nunits,
-                     args.random_state,
-                     args.cvout,
-                     args.n_splits,
-                     args.n_repeats,
-                     args.mout)
+            nn.runcv(
+                args.batch_size,
+                args.epochs,
+                args.steps_per_epoch,
+                args.nfilters,
+                args.nunits,
+                args.random_state,
+                args.cvout,
+                args.n_splits,
+                args.n_repeats,
+                args.mout,
+            )
             """
             nn.runloo(args.batch_size,
                       args.epochs,
@@ -1160,5 +1098,5 @@ def main():
             """
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

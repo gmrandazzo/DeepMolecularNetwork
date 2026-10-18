@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -13,7 +12,7 @@ from SMILES2Matrix import SMILES2MX
 def main():
     if len(sys.argv) == 4:
         s = SMILES2MX(int(sys.argv[2]))
-        fi = open(sys.argv[1], "r")
+        fi = open(sys.argv[1])
         fo = open(sys.argv[3], "w")
         for line in fi:
             v = str.split(line.strip(), "\t")
@@ -22,7 +21,7 @@ def main():
                 v = str.split(line.strip(), " ")
             m = s.smi2mx(v[0].strip())
             for row in m:
-                for i in range(len(row)-1):
+                for i in range(len(row) - 1):
                     fo.write("%d," % (row[i]))
                 fo.write("%d\n" % (row[-1]))
             fo.write("END\n")

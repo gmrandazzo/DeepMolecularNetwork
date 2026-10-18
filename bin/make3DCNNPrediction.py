@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # (c) 2018-2019 gmrandazzo@gmail.com
 # This file is part of DeepMolecularNetwork.
 # You can use,modify, and distribute it under
@@ -7,6 +6,7 @@
 # See the file LICENSE for details
 
 import argparse
+
 # from keras.callbacks import Callback, EarlyStopping, TensorBoard
 # from miscfun import exp_pred_plot
 
@@ -14,12 +14,15 @@ import numpy as np
 from pathlib import Path
 import random
 import sys
+
 # from sklearn.model_selection import RepeatedKFold
 import time
+
 # from tensorflow import set_random_seed
 from Voxel import LoadVoxelDatabase
 from datetime import datetime
 import tensorflow as tf
+
 if int(tf.__version__[0]) > 1:
     from tensorflow.keras import backend as K
 else:
@@ -35,7 +38,7 @@ from dmnnio import ReadDescriptors
 from modelhelpers import LoadKerasModels
 
 
-class ModelPredictor(object):
+class ModelPredictor:
     def __init__(self, mpath, db, csv_descriptors=None):
         self.mpath = mpath
         self.voxels = LoadVoxelDatabase(db)
@@ -79,26 +82,27 @@ class ModelPredictor(object):
         if len(input_shape) == 3:
             # Channel last
             input_shape.append(1)
-            conv3d_chtype = 'channels_last'
+            conv3d_chtype = "channels_last"
         else:
-            conv3d_chtype = 'channels_first'
-        print("Input shape: {}".format(input_shape))
+            conv3d_chtype = "channels_first"
+        print(f"Input shape: {input_shape}")
         print("Channel type: %s" % (conv3d_chtype))
         return tuple(input_shape), conv3d_chtype
 
     def VoxelDataGenerator(self, random_voxel_rotations):
         batch_features = None
         if "last" in self.conv3d_chtype:
-            batch_features = np.array([]).reshape(0,
-                                                  self.input_shape[0],
-                                                  self.input_shape[1],
-                                                  self.input_shape[2])
+            batch_features = np.array([]).reshape(
+                0, self.input_shape[0], self.input_shape[1], self.input_shape[2]
+            )
         else:
-            batch_features = np.array([]).reshape(0,
-                                                  self.input_shape[0],
-                                                  self.input_shape[1],
-                                                  self.input_shape[2],
-                                                  self.input_shape[3])
+            batch_features = np.array([]).reshape(
+                0,
+                self.input_shape[0],
+                self.input_shape[1],
+                self.input_shape[2],
+                self.input_shape[3],
+            )
         batch_desc_features = None
         if self.other_descriptors is not None:
             batch_desc_features = np.array([]).reshape(0, self.nfeatures)
@@ -111,7 +115,7 @@ class ModelPredictor(object):
             # try:
             max_conf = len(self.voxels[key])
             max_rot = len(self.voxels[key][0])
-            if random_voxel_rotations > max_rot*max_conf:
+            if random_voxel_rotations > max_rot * max_conf:
                 """
                 Fix the maximum rotation for the validation
                 and return the entire database!
@@ -121,15 +125,17 @@ class ModelPredictor(object):
                         voxel = self.voxels[key][c][i]
                         batch_features = np.vstack([batch_features, [voxel]])
                         if self.other_descriptors is not None:
-                            batch_desc_features = np.vstack([batch_desc_features, self.other_descriptors[key]])
+                            batch_desc_features = np.vstack(
+                                [batch_desc_features, self.other_descriptors[key]]
+                            )
             else:
                 for i in range(random_voxel_rotations):
-                    rconf = random.randint(0, max_conf-1)
-                    rrot = random.randint(0, max_rot-1)
+                    rconf = random.randint(0, max_conf - 1)
+                    rrot = random.randint(0, max_rot - 1)
                     while True:
                         if "%s-%d-%d" % (key, rconf, rrot) in selected_confs:
-                            rconf = random.randint(0, max_conf-1)
-                            rrot = random.randint(0, max_rot-1)
+                            rconf = random.randint(0, max_conf - 1)
+                            rrot = random.randint(0, max_rot - 1)
                         else:
                             break
                     selected_confs.append("%s-%d-%d" % (key, rconf, rrot))
@@ -138,16 +144,21 @@ class ModelPredictor(object):
                     voxel = self.voxels[key][rconf][rrot]
                     batch_features = np.vstack([batch_features, [voxel]])
                     if self.other_descriptors is not None:
-                        batch_desc_features = np.vstack([batch_desc_features, self.other_descriptors[key]])
+                        batch_desc_features = np.vstack(
+                            [batch_desc_features, self.other_descriptors[key]]
+                        )
             # except:
             #    print("Error while generating the test for %s" % (key))
 
         # Reshape dataset for Conv3D
         if "last" in self.conv3d_chtype:
-            batch_features = batch_features.reshape(batch_features.shape[0],
-                                                    batch_features.shape[1],
-                                                    batch_features.shape[2],
-                                                    batch_features.shape[3], 1)
+            batch_features = batch_features.reshape(
+                batch_features.shape[0],
+                batch_features.shape[1],
+                batch_features.shape[2],
+                batch_features.shape[3],
+                1,
+            )
         if batch_desc_features is not None:
             """
             batch_desc_features = batch_desc_features.reshape(batch_desc_features.shape[0],
@@ -158,10 +169,7 @@ class ModelPredictor(object):
         else:
             return batch_features
 
-
-    def predict(self,
-                n_rotations,
-                pout):
+    def predict(self, n_rotations, pout):
 
         predictions = {}
         for key in self.keys:
@@ -173,15 +181,15 @@ class ModelPredictor(object):
             y_pred = list(model.predict(x_topred))
 
             print(x_topred.shape)
-            #fv = FeatureVisualization(model, x_topred)
-            #fv.GradCAMAlgorithm()
+            # fv = FeatureVisualization(model, x_topred)
+            # fv.GradCAMAlgorithm()
 
             # Store the prediction results based on the input generation
             k = 0
             c = 0
             for i in range(len(y_pred)):
                 predictions[self.keys[k]].append(y_pred[i])
-                if c == n_rotations-1:
+                if c == n_rotations - 1:
                     k += 1
                     c = 0
                 else:
@@ -195,18 +203,14 @@ class ModelPredictor(object):
                 ystdev = np.std(predictions[key])
                 y_min = np.min(predictions[key])
                 y_max = np.max(predictions[key])
-                fo.write("%s,%.4f,%.4f,%.4f,%.4f\n" % (key,
-                                                    ypavg,
-                                                    ystdev,
-                                                    y_min,
-                                                    y_max))
+                fo.write(f"{key},{ypavg:.4f},{ystdev:.4f},{y_min:.4f},{y_max:.4f}\n")
             else:
                 continue
         fo.close()
         fo = open("all_y_%s" % (pout), "w")
         for key in predictions.keys():
             fo.write("%s," % (key))
-            for i in range(len(predictions[key])-1):
+            for i in range(len(predictions[key]) - 1):
                 fo.write("%.4f," % (predictions[key][i]))
             fo.write("%.4f\n" % (predictions[key][-1]))
         fo.close()
@@ -214,26 +218,13 @@ class ModelPredictor(object):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--desc_csv',
-                   default=None,
-                   type=str,
-                   help='Molecule descriptors')
-    p.add_argument('--db',
-                   default=None,
-                   type=str,
-                   help='DX path')
-    p.add_argument('--minp',
-                   default=None,
-                   type=str,
-                   help='model input')
-    p.add_argument('--n_rotations',
-                   default=100,
-                   type=int,
-                   help='Number of voxel rotation for the train')
-    p.add_argument('--pout',
-                   default=None,
-                   type=str,
-                   help='Prediction output')
+    p.add_argument("--desc_csv", default=None, type=str, help="Molecule descriptors")
+    p.add_argument("--db", default=None, type=str, help="DX path")
+    p.add_argument("--minp", default=None, type=str, help="model input")
+    p.add_argument(
+        "--n_rotations", default=100, type=int, help="Number of voxel rotation for the train"
+    )
+    p.add_argument("--pout", default=None, type=str, help="Prediction output")
     args = p.parse_args(sys.argv[1:])
 
     if args.pout is None or args.db is None or args.minp is None:
@@ -243,9 +234,12 @@ def main():
         print("--minp [keras model out]")
         print("--n_rotations [default 100]")
         print("--pout [default None]")
-        print("\nUsage model prediction example: python %s --db OptimisedConformation/ --desc_csv rdkit.desc.csv --nr_rotations 100 --minp model --out output.csv\n" % (sys.argv[0]))
+        print(
+            "\nUsage model prediction example: python %s --db OptimisedConformation/ --desc_csv rdkit.desc.csv --nr_rotations 100 --minp model --out output.csv\n"
+            % (sys.argv[0])
+        )
     else:
-        
+
         mp = ModelPredictor(args.minp, args.db, args.desc_csv)
         mp.predict(args.n_rotations, args.pout)
     return 0
