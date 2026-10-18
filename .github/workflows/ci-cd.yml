@@ -14,12 +14,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  pre-commit:
-    name: Lint & Typecheck (pre-commit)
-    runs-on: ubuntu-latest
+  code-quality:
+    name: 1. Code Quality & Linting
+    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -36,10 +36,10 @@ jobs:
         run: |
           pre-commit run --all-files --show-diff-on-failure
 
-  pytest:
-    name: Test (Python ${{ matrix.python-version }} - ${{ matrix.keras-target }})
-    needs: pre-commit
-    runs-on: ubuntu-latest
+  unit-tests:
+    name: 2. Unit Tests & Coverage (${{ matrix.python-version }} - ${{ matrix.keras-target }})
+    needs: code-quality
+    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,7 +53,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -66,19 +66,61 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[${{ matrix.keras-target }},test]"
 
-      - name: Run test suite
+      - name: Run test suite & generate coverage
         run: |
-          pytest tests/ -v
+          if [ "${{ matrix.python-version }}" = "3.13" ] && [ "${{ matrix.keras-target }}" = "keras3" ]; then
+            coverage run -m pytest tests/ -v
+            coverage xml
+          else
+            pytest tests/ -v
+          fi
 
-  build:
-    name: Build Wheel & Source Distribution
-    needs: pytest
-    # Build package only on tagged releases (e.g., v0.2.0) or manual workflow dispatch
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+      - name: Upload coverage report
+        if: matrix.python-version == '3.13' && matrix.keras-target == 'keras3'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  sonarqube:
+    name: 3. SonarQube (Code & Security Analysis)
+    needs: [code-quality, unit-tests]
+    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for accurate SonarQube analysis
+
+      - name: Download Coverage Report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: .
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarqube.gmrandazzo.com' }}
+
+      - name: SonarQube Quality Gate Check
+        id: sonarqube-quality-gate-check
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarqube.gmrandazzo.com' }}
+
+  build:
+    name: 4. Build Wheel & Source Distribution
+    needs: [unit-tests, sonarqube]
+    # Build package only on tagged releases (e.g., v0.2.0) or manual workflow dispatch
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -106,9 +148,9 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish package to PyPI
+    name: 5. Publish package to PyPI
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
     # Publish on tagged releases (e.g., v0.2.0) or manual workflow dispatch
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
     environment:
