@@ -3,28 +3,19 @@ Standard Numerical Parity and Regression Test Suite.
 Verifies numerical equivalence, loss functions, forward pass outputs,
 and 3D voxel transformations across legacy Keras 2 and modern Keras 3.
 """
+
 import numpy as np
-import pytest
-from pathlib import Path
 
 from deepmolecularnetwork.framework import (
-    is_keras_3,
-    keras,
     Sequential,
     Dense,
-    BatchNormalization,
-    Dropout,
-    Activation,
     Conv3D,
     MaxPooling3D,
     Flatten,
-    create_adam,
 )
-from deepmolecularnetwork.utility.numpy_loss_functions import MSE, MAE, RSQ, LOGMAE
-from deepmolecularnetwork.utility.keras_additional_loss_functions import rmse, score
+from deepmolecularnetwork.utility.numpy_loss_functions import MSE, MAE, RSQ
 from deepmolecularnetwork.voxels.opendx import readOpenDX, writeOpenDX
-from deepmolecularnetwork.voxels.model_builder import build_model
-from deepmolecularnetwork.tabular.makeTABModel import example_build_model, NNTrain
+from deepmolecularnetwork.tabular.makeTABModel import NNTrain
 from deepmolecularnetwork.utility.io import ReadDescriptors, ReadTarget
 
 
@@ -95,18 +86,18 @@ class TestModelForwardNumericalParity:
         n_features = 4
         n_units = 3
 
-        model = Sequential([
-            Dense(n_units, input_shape=(n_features,), activation='relu', use_bias=True),
-            Dense(1, activation=None, use_bias=True)
-        ])
+        model = Sequential(
+            [
+                Dense(n_units, input_shape=(n_features,), activation="relu", use_bias=True),
+                Dense(1, activation=None, use_bias=True),
+            ]
+        )
 
         # Assign deterministic weights
-        w1 = np.array([
-            [0.1, -0.2, 0.3],
-            [0.4, 0.5, -0.6],
-            [-0.7, 0.8, 0.9],
-            [0.2, -0.3, 0.4]
-        ], dtype=np.float32)
+        w1 = np.array(
+            [[0.1, -0.2, 0.3], [0.4, 0.5, -0.6], [-0.7, 0.8, 0.9], [0.2, -0.3, 0.4]],
+            dtype=np.float32,
+        )
         b1 = np.array([0.05, -0.1, 0.15], dtype=np.float32)
 
         w2 = np.array([[0.5], [-0.5], [1.0]], dtype=np.float32)
@@ -116,22 +107,21 @@ class TestModelForwardNumericalParity:
         model.layers[1].set_weights([w2, b2])
 
         # Input vector
-        x_input = np.array([
-            [1.0, 2.0, 3.0, 4.0],
-            [-1.0, 0.5, 1.5, -0.5]
-        ], dtype=np.float32)
+        x_input = np.array([[1.0, 2.0, 3.0, 4.0], [-1.0, 0.5, 1.5, -0.5]], dtype=np.float32)
 
         # Mathematical ground truth:
         # Sample 0:
         # z1 = x @ w1 + b1 = [1,2,3,4] @ w1 + b1
-        #   z1[0] = 1*0.1 + 2*0.4 - 3*0.7 + 4*0.2 + 0.05 = 0.1 + 0.8 - 2.1 + 0.8 + 0.05 = -0.35 -> relu: 0.0
-        #   z1[1] = 1*(-0.2) + 2*0.5 + 3*0.8 - 4*0.3 - 0.1 = -0.2 + 1.0 + 2.4 - 1.2 - 0.1 = 1.9 -> relu: 1.9
-        #   z1[2] = 1*0.3 - 2*0.6 + 3*0.9 + 4*0.4 + 0.15 = 0.3 - 1.2 + 2.7 + 1.6 + 0.15 = 3.55 -> relu: 3.55
+        #   z1[0] = 0.1 + 0.8 - 2.1 + 0.8 + 0.05 = -0.35 -> relu: 0.0
+        #   z1[1] = -0.2 + 1.0 + 2.4 - 1.2 - 0.1 = 1.9 -> relu: 1.9
+        #   z1[2] = 0.3 - 1.2 + 2.7 + 1.6 + 0.15 = 3.55 -> relu: 3.55
         # z2 = [0, 1.9, 3.55] @ [0.5, -0.5, 1.0] + 0.25 = 0 - 0.95 + 3.55 + 0.25 = 2.85
         expected_y0 = 2.85
 
         y_pred = model.predict(x_input, verbose=0)
-        assert np.isclose(y_pred[0, 0], expected_y0, atol=1e-5), f"Expected {expected_y0}, got {y_pred[0, 0]}"
+        assert np.isclose(
+            y_pred[0, 0], expected_y0, atol=1e-5
+        ), f"Expected {expected_y0}, got {y_pred[0, 0]}"
         assert y_pred.shape == (2, 1)
 
     def test_3d_cnn_forward_parity(self):
@@ -139,12 +129,20 @@ class TestModelForwardNumericalParity:
         Builds a 3D CNN model and verifies output tensor computation.
         """
         input_shape = (8, 8, 8, 1)
-        model = Sequential([
-            Conv3D(4, kernel_size=(3, 3, 3), input_shape=input_shape, padding='same', activation='relu'),
-            MaxPooling3D(pool_size=(2, 2, 2)),
-            Flatten(),
-            Dense(1)
-        ])
+        model = Sequential(
+            [
+                Conv3D(
+                    4,
+                    kernel_size=(3, 3, 3),
+                    input_shape=input_shape,
+                    padding="same",
+                    activation="relu",
+                ),
+                MaxPooling3D(pool_size=(2, 2, 2)),
+                Flatten(),
+                Dense(1),
+            ]
+        )
 
         # Test deterministic forward evaluation
         x_3d = np.ones((2, 8, 8, 8, 1), dtype=np.float32) * 0.5
@@ -179,6 +177,7 @@ class TestVoxelAndGridParity:
 
     def test_rotation_matrix_orthogonality(self):
         """Verify 3D rotation matrices maintain orthogonality (R * R^T = I)."""
+
         def mk3drotx(theta):
             ret = np.eye(4)
             ret[1, [1, 2]] = [np.cos(theta), -np.sin(theta)]
@@ -228,7 +227,7 @@ class TestTabularDeterministicBenchmark:
             ndense_layers=1,
             nunits=32,
             random_state=12345,
-            model_output=None
+            model_output=None,
         )
 
         assert results is not None

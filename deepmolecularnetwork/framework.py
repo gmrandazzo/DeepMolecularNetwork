@@ -2,19 +2,20 @@
 Framework compatibility layer supporting both legacy Keras 2 / TensorFlow 2.x
 and modern Keras 3 / modern TensorFlow.
 """
-import sys
-from pathlib import Path
 
 try:
     import keras
+
     _keras_version = getattr(keras, "__version__", "2.0.0")
 except ImportError:
     try:
         from tensorflow import keras
+
         _keras_version = getattr(keras, "__version__", "2.0.0")
     except ImportError:
         keras = None
         _keras_version = "0.0.0"
+
 
 def is_keras_3() -> bool:
     """Return True if running on Keras 3+."""
@@ -25,6 +26,7 @@ def is_keras_3() -> bool:
         return major >= 3
     except (ValueError, IndexError):
         return False
+
 
 # Export core modules
 K = keras.backend
@@ -77,11 +79,13 @@ MaxPooling1D = keras.layers.MaxPooling1D
 regularizers = keras.regularizers
 l2 = keras.regularizers.l2
 
+
 def create_adam(learning_rate=0.001, **kwargs):
     """Create an Adam optimizer supporting both lr and learning_rate kwargs."""
     if "lr" in kwargs and "learning_rate" not in kwargs:
         kwargs["learning_rate"] = kwargs.pop("lr")
     return Adam(learning_rate=learning_rate, **kwargs)
+
 
 def save_model_compat(model, filepath, **kwargs):
     """

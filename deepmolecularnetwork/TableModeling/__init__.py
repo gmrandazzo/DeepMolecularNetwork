@@ -1,5 +1,6 @@
 """
 Backward compatibility module forwarding TableModeling to tabular.
 """
-from deepmolecularnetwork.tabular import *
-from deepmolecularnetwork.tabular.makeTABModel import *
+
+from deepmolecularnetwork.tabular import *  # noqa: F401, F403
+from deepmolecularnetwork.tabular.makeTABModel import *  # noqa: F401, F403
