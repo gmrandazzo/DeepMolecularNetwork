@@ -13,60 +13,42 @@ from deepmolecularnetwork.utility.dissimilar_compound_selection import DISC
 from deepmolecularnetwork.utility.most_descriptive_compound import MDC
 
 
-def MDCTrainTestSplit(dict_target, n_objects=0):
+def mdc_train_test_split(dict_target, n_objects=0):
     """
     Most descriptive compound train/test
     selection starting from a dictionary target
     """
     y = list(dict_target.values())
     keys = list(dict_target.keys())
-    dmx = [[1.0 for j in range(len(y))] for i in range(len(y))]
+    dmx = [[1.0] * len(y) for _ in range(len(y))]
     for i in range(len(y)):
         for j in range(i + 1, len(y)):
-            dmx[i][j] = dmx[j][i] = np.sqrt((y[i] - y[j]) ** 2)
+            dmx[i][j] = dmx[j][i] = float(np.sqrt((y[i] - y[j]) ** 2))
     csel = MDC(dmx, n_objects)
-    test_keys = []
-    for indx in csel.select():
-        test_keys.append(keys[indx])
-    train_keys = []
-    for key in dict_target.keys():
-        if key not in test_keys:
-            train_keys.append(key)
-        else:
-            continue
+    test_keys = [keys[indx] for indx in csel.select()]
+    train_keys = [key for key in dict_target.keys() if key not in test_keys]
     return train_keys, test_keys
 
 
-def DISCTrainTestSplit(dict_target, n_objects=0):
+def disc_train_test_split(dict_target, n_objects=0):
     """
     Dissimilarity compound selection
     selection starting from a dictionary target
     """
     y = list(dict_target.values())
     keys = list(dict_target.keys())
-    dmx = [[1.0 for j in range(len(y))] for i in range(len(y))]
+    dmx = [[1.0] * len(y) for _ in range(len(y))]
     for i in range(len(y)):
         for j in range(i + 1, len(y)):
-            dmx[i][j] = dmx[j][i] = np.sqrt((y[i] - y[j]) ** 2)
-    csel = None
-    if n_objects == 0:
-        # Get the 20% of the dataset
-        csel = DISC(dmx, "max", len(keys) * 0.2)
-    else:
-        csel = DISC(dmx, "max", n_objects)
-    test_keys = []
-    for indx in csel.select():
-        test_keys.append(keys[indx])
-    train_keys = []
-    for key in dict_target.keys():
-        if key not in test_keys:
-            train_keys.append(key)
-        else:
-            continue
+            dmx[i][j] = dmx[j][i] = float(np.sqrt((y[i] - y[j]) ** 2))
+    target_count = len(keys) * 0.2 if n_objects == 0 else n_objects
+    csel = DISC(dmx, "max", target_count)
+    test_keys = [keys[indx] for indx in csel.select()]
+    train_keys = [key for key in dict_target.keys() if key not in test_keys]
     return train_keys, test_keys
 
 
-def TrainTestSplit(keys_, test_size=0.20, random_state=None):
+def train_test_split(keys_, test_size=0.20, random_state=None):
     """
     Split dataset in training set and test set accounting
     """
@@ -79,74 +61,60 @@ def TrainTestSplit(keys_, test_size=0.20, random_state=None):
         random.seed(random_state)
     nsel = int(np.ceil(n_objects * test_size))
     test_keys = random.sample(keys, nsel)
-    train_keys = []
-    for key in keys:
-        if key in test_keys:
-            continue
-        else:
-            train_keys.append(key)
+    train_keys = [key for key in keys if key not in test_keys]
     return train_keys, test_keys
 
 
-def RepeatedKFold(keys, n_splits=5, n_repeats=20, random_state=None, test_size=0.2):
+def repeated_kfold(keys, n_splits=5, n_repeats=20, random_state=None, test_size=0.2):
     """
     Repeated K-fold cross validation method starting from a dictionary target
     """
-    rs = None
-    if random_state is not None:
-        rs = random_state
-    else:
-        rs = 0
+    rs = random_state if random_state is not None else 0
 
     for r in range(n_repeats):
-        for subset, test in KFold(keys, n_splits, rs + r):
-            train, val = TrainTestSplit(subset, test_size, rs + r)
+        for subset, test in kfold(keys, n_splits, rs + r):
+            train, val = train_test_split(subset, test_size, rs + r)
             yield train, val, test
 
 
-def KFold(keys, n_splits, random_state=None):
+def kfold(keys, n_splits, random_state=None):
     if random_state is None:
         random.seed(datetime.now().microsecond)
     else:
         random.seed(random_state)
-    indexes = [i for i in range(len(keys))]
+    indexes = list(range(len(keys)))
     random.shuffle(indexes)
     appgroup = []
     maxgobj = int(ceil(len(keys) / float(n_splits)))
     n = 0
     g = 0
-    for i in range(len(keys)):
+    for _ in range(len(keys)):
         if n == maxgobj:
             n = 0
             g += 1
-            appgroup.append(g)
-        else:
-            appgroup.append(g)
-            n += 1
+        appgroup.append(g)
+        n += 1
 
-    for g in range(n_splits):
+    for group_idx in range(n_splits):
         train_keys = []
         test_keys = []
-        for k in range(len(keys)):
-            if appgroup[k] == g:
-                test_keys.append(keys[indexes[k]])
+        for k, key_idx in enumerate(indexes):
+            if appgroup[k] == group_idx:
+                test_keys.append(keys[key_idx])
             else:
-                train_keys.append(keys[indexes[k]])
+                train_keys.append(keys[key_idx])
         yield train_keys, test_keys
 
 
-def CVGroupRead(fcvgroup):
+def cv_group_read(fcvgroup):
     d = {}
-    g = 0
-    f = open(fcvgroup)
-    for line in f:
-        d[g] = list(str.split(line.strip(), ","))
-        g += 1
-    f.close()
+    with open(fcvgroup) as f:
+        for g, line in enumerate(f):
+            d[g] = list(str.split(line.strip(), ","))
     return d
 
 
-def StaticGroupCV(d):
+def static_group_cv(d):
     """
     Static group cross validation
     """
@@ -155,14 +123,12 @@ def StaticGroupCV(d):
         test_keys = d[i]
         train_keys = []
         for j in keys:
-            if i == j:
-                continue
-            else:
+            if i != j:
                 train_keys.extend(d[j])
         yield (train_keys, test_keys)
 
 
-def RepeatedStratifiedCV(d, iterations=100, merge_ngroups=2):
+def repeated_stratified_cv(d, iterations=100, merge_ngroups=2):
     """
     Repeated Stratified Group Cross Validation.
     d: is a dictionary of object names. Every key is a group and every value
@@ -170,9 +136,8 @@ def RepeatedStratifiedCV(d, iterations=100, merge_ngroups=2):
     """
     random_state = datetime.now().microsecond
     random.seed(random_state)
-    keys = list(d.keys())
-    gid = [i for i in range(len(keys))]
-    for it in range(iterations):
+    gid = list(d.keys())
+    for _ in range(iterations):
         random.shuffle(gid)
         test_keys = []
         for i in range(merge_ngroups):
@@ -181,3 +146,14 @@ def RepeatedStratifiedCV(d, iterations=100, merge_ngroups=2):
         for i in range(merge_ngroups, len(gid)):
             train_keys.extend(d[gid[i]])
         yield (train_keys, test_keys)
+
+
+# Backward compatible CamelCase aliases
+MDCTrainTestSplit = mdc_train_test_split
+DISCTrainTestSplit = disc_train_test_split
+TrainTestSplit = train_test_split
+RepeatedKFold = repeated_kfold
+KFold = kfold
+CVGroupRead = cv_group_read
+StaticGroupCV = static_group_cv
+RepeatedStratifiedCV = repeated_stratified_cv

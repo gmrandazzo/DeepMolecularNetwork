@@ -27,7 +27,7 @@ def _extract_numbers(stripped, values):
         values.extend(float(item) for item in v)
 
 
-def readOpenDX(ifile):
+def read_open_dx(ifile):
     voxel = None
     origin = None
     delta = []
@@ -59,7 +59,7 @@ def readOpenDX(ifile):
     return voxel, origin, delta
 
 
-def writeOpenDX(voxel, origin, delta, outfile):
+def write_open_dx(voxel, origin, delta, outfile):
     s0, s1, s2 = voxel.shape[0], voxel.shape[1], voxel.shape[2]
     with open(outfile, "w") as fo:
         fo.write(f"object 1 class gridpositions counts {s0} {s1} {s2}\n")
@@ -80,6 +80,6 @@ def writeOpenDX(voxel, origin, delta, outfile):
         fo.write('component "data" value 3\n')
 
 
-# Snake_case aliases for modern standard conventions
-read_open_dx = readOpenDX
-write_open_dx = writeOpenDX
+# Backward compatible aliases
+readOpenDX = read_open_dx
+writeOpenDX = write_open_dx

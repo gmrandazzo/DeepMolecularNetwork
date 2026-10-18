@@ -5,18 +5,20 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-import numpy as np
 import os
 from pathlib import Path
+import numpy as np
 
 
-def WriteNameList(namelst, fout):
+def write_name_list(namelst, fout):
+    """Write list of molecule names to file."""
     with open(fout, "w") as fo:
         for name in namelst:
             fo.write("%s\n" % (name))
 
 
-def LoadNameList(fnames):
+def load_name_list(fnames):
+    """Load list of molecule names from file."""
     names = []
     with open(fnames) as fi:
         for line in fi:
@@ -24,7 +26,8 @@ def LoadNameList(fnames):
     return names
 
 
-def AddDNNDatabase(path_, names, xmatrix_):
+def add_dnn_database(path_, names, xmatrix_):
+    """Append a descriptor matrix and names to DNN database directory."""
     xmatrix = np.array(xmatrix_)
     dbpath = "%s.dnndb" % (path_)
     i = 0
@@ -38,15 +41,23 @@ def AddDNNDatabase(path_, names, xmatrix_):
     with open("%s/db.info" % (dbpath), "a") as finfo:
         finfo.write("db%d;%d;%d\n" % (i, shape[0], shape[1]))
     np.save(fdb, xmatrix)
-    WriteNameList(names, "%s/db%d.names" % (dbpath, i))
+    write_name_list(names, "%s/db%d.names" % (dbpath, i))
 
 
-def LoadDNNDatabase(dbpath):
+def load_dnn_database(dbpath):
+    """Load stored DNN database batches into a dictionary."""
     d = {}
     with open("%s/db.info" % (dbpath)) as fi:
         for line in fi:
             v = str.split(line.strip(), ";")
-            names = LoadNameList(f"{dbpath}/{v[0]}.names")
+            names = load_name_list(f"{dbpath}/{v[0]}.names")
             mx = np.load(f"{dbpath}/{v[0]}.npy", mmap_mode=None)
             d[v[0]] = [names, mx, v[1], v[2]]
     return d
+
+
+# Backward compatible aliases
+WriteNameList = write_name_list
+LoadNameList = load_name_list
+AddDNNDatabase = add_dnn_database
+LoadDNNDatabase = load_dnn_database

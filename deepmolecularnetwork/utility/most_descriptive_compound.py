@@ -59,32 +59,17 @@ class MDC:
         self._appendnext()
         return self.mdcids[-1]
 
+    def _is_stop_condition(self):
+        if self.nobjects > 0:
+            return len(self.mdcids) >= min(self.nobjects, len(self.dmx_))
+        ncheck = sum(1 for item in self.info_ if item < 1)
+        return ncheck > len(self.mdcids)
+
     def select(self):
         """Run the Most Descriptive Compound Selection"""
-        stopcondition = True
-        while stopcondition:
+        while not self._is_stop_condition():
             self._appendnext()
             self._rm_mdc_contrib()
-            # Check Stop Condition
-            if self.nobjects > 0:
-                if len(self.mdcids) == len(self.dmx_):
-                    stopcondition = False
-                else:
-                    if len(self.mdcids) < self.nobjects:
-                        continue
-                    else:
-                        stopcondition = False
-            else:
-                ncheck = 0
-                for item in self.info_:
-                    if item < 1:
-                        ncheck += 1
-                    else:
-                        continue
-
-                if ncheck > len(self.mdcids):
-                    stopcondition = False
-
         return self.mdcids
 
     def _build_infovector(self):
@@ -150,8 +135,8 @@ if __name__ == "__main__":
     import time
 
     N = 1000  # slow with 5000
-    np.random.seed(N)
-    mx = np.random.rand(N, 2)
+    rng = np.random.default_rng(N)
+    mx = rng.random((N, 2))
 
     dmx = squareform(pdist(mx, "euclidean"))
 

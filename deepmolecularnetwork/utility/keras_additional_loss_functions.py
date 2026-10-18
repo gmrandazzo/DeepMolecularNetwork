@@ -5,18 +5,18 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-from deepmolecularnetwork.framework import K
+from deepmolecularnetwork.framework import ops
 
 
 def rmse(y_true, y_pred):
     """
     Root Mean Square Error
     """
-    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
+    return ops.sqrt(ops.mean(ops.square(y_pred - y_true), axis=-1))
 
 
 def score(y_true, y_pred):
     """
     Score function 1
     """
-    return K.log(K.mean(K.abs(y_true - y_pred), axis=-1) + 1)
+    return ops.log(ops.mean(ops.abs(y_true - y_pred), axis=-1) + 1)

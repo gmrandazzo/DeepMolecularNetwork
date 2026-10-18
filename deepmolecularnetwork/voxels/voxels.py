@@ -18,7 +18,7 @@ import numpy as np
 from deepmolecularnetwork.voxels.opendx import readOpenDX, writeOpenDX
 
 
-def SaveVoxelDatabase(path_, name, voxels):
+def save_voxel_database(path_, name, voxels):
     vpath_ = f"{path_}/{name}.vdb"
     if not Path(vpath_).is_dir():
         os.makedirs(vpath_, exist_ok=True)
@@ -29,19 +29,31 @@ def SaveVoxelDatabase(path_, name, voxels):
     np.save(db_path, voxels)
 
 
-def LoadVoxelDatabase(path_):
+def _load_single_vdb(vdb_dir, result_dict):
+    name = vdb_dir.resolve().stem.split(".")[0]
+    npy_files = [f for f in vdb_dir.iterdir() if f.is_file() and ".npy" in f.name]
+    for db in npy_files:
+        arr = np.load(str(db), mmap_mode=None)
+        if name in result_dict:
+            result_dict[name].append(arr)
+        else:
+            result_dict[name] = [arr]
+
+
+def load_voxel_database(path_):
     d = {}
-    for p in Path(path_).iterdir():
+    base = Path(path_)
+    if not base.exists():
+        return d
+    for p in base.iterdir():
         if p.is_dir() and ".vdb" in str(p):
-            name = p.resolve().stem.split(".")[0]
-            for db in Path(str(p)).iterdir():
-                if db.is_file() and ".npy" in str(db):
-                    arr = np.load(str(db), mmap_mode=None)
-                    if name in d:
-                        d[name].append(arr)
-                    else:
-                        d[name] = [arr]
+            _load_single_vdb(p, d)
     return d
+
+
+# Backward compatible aliases
+SaveVoxelDatabase = save_voxel_database
+LoadVoxelDatabase = load_voxel_database
 
 
 class VoxelObject:
@@ -58,21 +70,35 @@ class VoxelObject:
         self.origins = []
         self.deltas = []
         for dxname in dxnames:
-            v, o, d = self.dxRead(dxname)
+            v, o, d = self.dx_read(dxname)
             self.voxels.append(v)
             self.origins.append(o)
             self.deltas.append(d)
 
-    def dxRead(self, dxfile):
+    _LEGACY_ALIASES = {
+        "dxRead": "dx_read",
+        "toFlatten": "to_flatten",
+        "ComputeVoxelRotation": "compute_voxel_rotation",
+        "ComputeChannelGeneration": "compute_channel_generation",
+        "ChannelsGenerator": "channels_generator",
+        "VoxelRotation": "voxel_rotation",
+    }
+
+    def __getattr__(self, name: str):
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def dx_read(self, dxfile):
         """Read the DX file and convert to numpy array."""
         v, o, d = readOpenDX(dxfile)
         return v, o, d
 
-    def toFlatten(self):
+    def to_flatten(self):
         """Flatten multichannel voxels into 1D vector."""
         return np.array(self.voxels).ravel()
 
-    def ComputeVoxelRotation(self, n_rotations, multiple_ch=False):
+    def compute_voxel_rotation(self, n_rotations, multiple_ch=False):
         """Compute 3D rotations for voxels."""
         if n_rotations == 0:
             x = list(self.voxels)
@@ -81,18 +107,18 @@ class VoxelObject:
             return np.array(x)
 
         p = Pool(processes=cpu_count())
-        x_rotated = p.map(self.VoxelRotation, [self.voxels for _ in range(n_rotations)])
+        x_rotated = p.map(self.voxel_rotation, [self.voxels for _ in range(n_rotations)])
         p.close()
         return np.array(x_rotated)
 
-    def ComputeChannelGeneration(self, voxels):
+    def compute_channel_generation(self, voxels):
         """Generate multichannel representation using multiprocessing."""
         p = Pool(processes=cpu_count())
-        ch_voxels = p.map(self.ChannelsGenerator, list(voxels))
+        ch_voxels = p.map(self.channels_generator, list(voxels))
         p.close()
         return np.array(ch_voxels)
 
-    def ChannelsGenerator(
+    def channels_generator(
         self,
         voxel,
         isovalues=(-0.3, -0.2, -0.15, -0.1, -0.05, 0.05, 0.10, 0.15, 0.20, 0.30),
@@ -137,7 +163,7 @@ class VoxelObject:
         ret[1, [0, 1]] = [np.sin(theta), np.cos(theta)]
         return ret
 
-    def VoxelRotation(self, voxels):
+    def voxel_rotation(self, voxels):
         """Rotate a multichannel voxel representation."""
         gs = [np.array(v) for v in voxels]
         ngs = [np.zeros_like(v) for v in voxels]
@@ -151,31 +177,30 @@ class VoxelObject:
         f_t = self.mk3dtr(-h_x, -h_y, -h_z)
         f_r = self.mk3drotz(yaw) @ self.mk3droty(pitch) @ self.mk3drotx(roll)
         f_b = self.mk3dtr(h_x, h_y, h_z)
+        transform_matrix = f_b @ f_r @ f_t
 
         dim0, dim1, dim2 = gs[0].shape
-        for i in range(dim0):
-            for j in range(dim1):
-                for k in range(dim2):
-                    p = [i, j, k, 1]
-                    np_ = f_t @ p
-                    np_r = f_r @ np_
-                    np_r_t = f_b @ np_r
-                    n_i, n_j, n_k, _ = np.floor(np_r_t).astype("int")
-                    if 0 <= n_i < dim0 and 0 <= n_j < dim1 and 0 <= n_k < dim2:
-                        for ch in range(len(gs)):
-                            ngs[ch][n_i, n_j, n_k] = gs[ch][i, j, k]
+        coords = np.indices((dim0, dim1, dim2)).reshape(3, -1)
+        homo_coords = np.vstack([coords, np.ones((1, coords.shape[1]))])
+
+        transformed = np.floor(transform_matrix @ homo_coords).astype(int)
+        n_i, n_j, n_k = transformed[0], transformed[1], transformed[2]
+
+        valid = (n_i >= 0) & (n_i < dim0) & (n_j >= 0) & (n_j < dim1) & (n_k >= 0) & (n_k < dim2)
+
+        orig_i, orig_j, orig_k = coords[0][valid], coords[1][valid], coords[2][valid]
+        target_i, target_j, target_k = n_i[valid], n_j[valid], n_k[valid]
+
+        for ch in range(len(gs)):
+            ngs[ch][target_i, target_j, target_k] = gs[ch][orig_i, orig_j, orig_k]
+
         return ngs
-
-
-# Snake_case alias
-save_voxel_database = SaveVoxelDatabase
-load_voxel_database = LoadVoxelDatabase
 
 
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         vobj = VoxelObject([sys.argv[1]])
-        new_voxels = vobj.VoxelRotation(vobj.voxels)
+        new_voxels = vobj.voxel_rotation(vobj.voxels)
         writeOpenDX(new_voxels[0], vobj.origins[0], vobj.deltas[0], sys.argv[2])
     else:
         print(f"\n Usage: {sys.argv[0]} [input dx] [output dx]\n")

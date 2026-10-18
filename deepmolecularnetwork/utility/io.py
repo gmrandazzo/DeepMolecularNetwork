@@ -10,7 +10,7 @@ See the file LICENSE for details
 import numpy as np
 
 
-def ReadDescriptors(csv_descriptors, sep=","):
+def read_descriptors(csv_descriptors, sep=","):
     """
     Read Molecular Descriptors and get back as dictionary.
     Returns the dictionary, number of features, and header names.
@@ -31,7 +31,7 @@ def ReadDescriptors(csv_descriptors, sep=","):
     return d, len(list(d.values())[0]), header
 
 
-def ReadTarget(csv_target, sep=","):
+def read_target(csv_target, sep=","):
     """Read CSV Target dictionary."""
     d = {}
     with open(csv_target) as fi:
@@ -49,7 +49,31 @@ def ReadTarget(csv_target, sep=","):
     return d
 
 
-def WriteCrossValidationOutput(outcsv, ground_true_dict, prediction_dict, recalculated_dict):
+def _format_prediction_columns(key, col, ground_true_dict, prediction_dict):
+    """Format prediction statistics for a given key and column index."""
+    ytrue = float(ground_true_dict[key][col]) if key in ground_true_dict else 0.0
+    if key in prediction_dict:
+        ypred = [float(pred[col]) for pred in prediction_dict[key]]
+        freq = len(ypred)
+        ypavg = float(np.mean(ypred))
+        ypstdev = float(np.std(ypred))
+        return f",{ytrue:.4f},{ypavg:.4f},{ypstdev:.4f},{ytrue - ypavg:.4f},{freq:d}"
+    return f",{ytrue:.4f},0.0,0.0,0.0,0"
+
+
+def _format_recalculated_columns(key, col, ground_true_dict, recalculated_dict):
+    """Format recalculated statistics for a given key and column index."""
+    if key in recalculated_dict:
+        yrecalc = [float(recalc[col]) for recalc in recalculated_dict[key]]
+        freq = len(yrecalc)
+        yravg = float(np.mean(yrecalc))
+        yrstdev = float(np.std(yrecalc))
+        ytrue = float(ground_true_dict[key][col]) if key in ground_true_dict else 0.0
+        return f",{yravg:.4f},{yrstdev:.4f},{ytrue - yravg:.4f},{freq:d}"
+    return ",0.0,0.0,0.0,0"
+
+
+def write_cross_validation_output(outcsv, ground_true_dict, prediction_dict, recalculated_dict):
     """Write cross-validation predictions and statistics to CSV."""
     ncols = len(list(ground_true_dict.values())[0])
     with open(outcsv, "w") as f:
@@ -66,40 +90,18 @@ def WriteCrossValidationOutput(outcsv, ground_true_dict, prediction_dict, recalc
             )
         f.write("\n")
 
-        keys = list(ground_true_dict.keys())
-        keys.extend(list(prediction_dict.keys()))
-        keys = list(set(keys))
+        all_keys = sorted(set(ground_true_dict.keys()) | set(prediction_dict.keys()))
 
-        for key in keys:
+        for key in all_keys:
             f.write(str(key))
-            if key in prediction_dict:
-                for j in range(ncols):
-                    ypred = [float(pred[j]) for pred in prediction_dict[key]]
-                    freq = len(ypred)
-                    ypavg = float(np.mean(ypred))
-                    ypstdev = float(np.std(ypred))
-                    ytrue = float(ground_true_dict[key][j]) if key in ground_true_dict else 0.0
-                    f.write(f",{ytrue:.4f},{ypavg:.4f},{ypstdev:.4f},{ytrue - ypavg:.4f},{freq:d}")
-            else:
-                for j in range(ncols):
-                    ytrue = float(ground_true_dict[key][j]) if key in ground_true_dict else 0.0
-                    f.write(f",{ytrue:.4f},0.0,0.0,0.0,0")
-
-            if key in recalculated_dict:
-                for j in range(ncols):
-                    yrecalc = [float(recalc[j]) for recalc in recalculated_dict[key]]
-                    freq = len(yrecalc)
-                    yravg = float(np.mean(yrecalc))
-                    yrstdev = float(np.std(yrecalc))
-                    ytrue = float(ground_true_dict[key][j]) if key in ground_true_dict else 0.0
-                    f.write(f",{yravg:.4f},{yrstdev:.4f},{ytrue - yravg:.4f},{freq:d}")
-            else:
-                for j in range(ncols):
-                    f.write(",0.0,0.0,0.0,0")
+            for col in range(ncols):
+                f.write(_format_prediction_columns(key, col, ground_true_dict, prediction_dict))
+            for col in range(ncols):
+                f.write(_format_recalculated_columns(key, col, ground_true_dict, recalculated_dict))
             f.write("\n")
 
 
-# Snake_case aliases
-read_descriptors = ReadDescriptors
-read_target = ReadTarget
-write_cross_validation_output = WriteCrossValidationOutput
+# Backward compatible CamelCase aliases
+ReadDescriptors = read_descriptors
+ReadTarget = read_target
+WriteCrossValidationOutput = write_cross_validation_output

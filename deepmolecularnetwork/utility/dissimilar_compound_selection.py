@@ -8,18 +8,17 @@
 Maximum dissimilarity object selection
 """
 
-from random import randrange
-from random import seed
+from random import randrange, seed
 from datetime import datetime
 
 
 def _median(lst):
     """Get median of list"""
     slst = sorted(lst)
+    mid = len(slst) // 2
     if len(slst) % 2 != 0:
-        return slst[len(slst) // 2]
-    else:
-        return (slst[len(slst) // 2] + slst[len(slst) // 2 - 1]) / 2.0
+        return slst[mid]
+    return (slst[mid] + slst[mid - 1]) / 2.0
 
 
 class DISC:
@@ -81,54 +80,35 @@ class DISC:
         seed(datetime.now().microsecond)
         self.disids.append(randrange(0, len(self.dmx_) - 1))
 
-        if self.method == "min":
-            while len(self.disids) < self.nobjects:
-                self._appendnext_min()
-        elif self.method == "med":
-            while len(self.disids) < self.nobjects:
-                self._appendnext_med()
-        elif self.method == "sum":
-            while len(self.disids) < self.nobjects:
-                self._appendnext_sum()
-        else:
-            while len(self.disids) < self.nobjects:
-                self._appendnext_max()
+        dispatch = {
+            "min": self._appendnext_min,
+            "med": self._appendnext_med,
+            "sum": self._appendnext_sum,
+        }
+        step_fn = dispatch.get(self.method, self._appendnext_max)
+
+        while len(self.disids) < self.nobjects:
+            step_fn()
         return self.dislist()
 
     def _appendnext_med(self):
         """Append the next object following the sum dissimilarity"""
-        # first column is the distance and second is the objectid
         dis = [[0, i] for i in range(len(self.dmx_))]
         for i in range(len(self.dmx_)):
             if i not in self.disids:
-                dlist = []
-                for j in range(len(self.disids)):
-                    dlist.append(self.dmx_[i][self.disids[j]])
+                dlist = [self.dmx_[i][d_id] for d_id in self.disids]
                 dis[i][0] = _median(dlist)
-            else:
-                continue
-        # first column is the distance and second is the objectid
         dis = sorted(dis, key=lambda item: item[0])
-        # Select the object with the maximum distances
-        # between all the summed distances list
-        # and this is the last object in list
         self.disids.append(dis[-1][-1])
 
     def _appendnext_sum(self):
         """Append the next object following the median dissimilarity"""
-        # first column is the distance and second is the objectid
         dis = [[0, i] for i in range(len(self.dmx_))]
-        for i in range(len(self.disids)):
+        for d_id in self.disids:
             for j in range(len(self.dmx_)):
                 if j not in self.disids:
-                    dis[j][0] += self.dmx_[self.disids[i]][j]
-                else:
-                    continue
-        # first column is the distance and second is the objectid
+                    dis[j][0] += self.dmx_[d_id][j]
         dis = sorted(dis, key=lambda item: item[0])
-        # Select the object with the maximum distances
-        # between all the summed distances list
-        # and this is the last object in list
         self.disids.append(dis[-1][-1])
 
     def _appendnext_max(self):
@@ -136,82 +116,41 @@ class DISC:
         dis = [[0, i] for i in range(len(self.dmx_))]
         for i in range(len(self.dmx_)):
             if i not in self.disids:
-                maxdisid = 0
-                maxdis = self.dmx_[i][self.disids[maxdisid]]
+                maxdis = self.dmx_[i][self.disids[0]]
                 for j in range(1, len(self.disids)):
                     if self.dmx_[i][self.disids[j]] > maxdis:
                         maxdis = self.dmx_[i][self.disids[j]]
-                        maxdisid = i
-                    else:
-                        continue
                 dis[i][0] = maxdis
-            else:
-                continue
-        # first column is the distance and second is the objectid
         dis = sorted(dis, key=lambda item: item[0])
-        # Select the object with the max distances
-        # between all the minimum distances list
-        # and this is the last object in list
         self.disids.append(dis[-1][-1])
 
     def _appendnext_min(self):
         """Append the next object following the minimum dissimilarity"""
         dis = [[0, i] for i in range(len(self.dmx_))]
-        # t = time.time()
         for i in range(len(self.dmx_)):
             if i not in self.disids:
                 mindis = self.dmx_[i][self.disids[0]]
                 for j in range(1, len(self.disids)):
                     if self.dmx_[i][self.disids[j]] < mindis:
                         mindis = self.dmx_[i][self.disids[j]]
-                    else:
-                        continue
                 dis[i][0] = mindis
-            else:
-                continue
-        # print "Time1: %.3f" % (time.time()-t)
-        # t = time.time()
-        # first column is the distance and second is the objectid
         dis = sorted(dis, key=lambda item: item[0])
-        # print "Time2: %.3f" % (time.time()-t)
-        # Select the object with the max distances
-        # between all the minimum distances list
-        # and this is the last object in list
         self.disids.append(dis[-1][-1])
-        # print "-"*10
 
     def _appendnext_min2(self):
         """Append the next object following the minimum dissimilarity"""
-        # t = time.time()
         dis = []
-        for i in range(len(self.disids)):
+        for d_id in self.disids:
+            row_idx = int(d_id)
             mindis = None
             objid = None
-            for j in range(len(self.dmx_[int(self.disids[i])])):
-                if self.disids[i] != j and j not in self.disids:
-                    if mindis is None:
-                        mindis = self.dmx_[int(self.disids[i])][j]
+            for j in range(len(self.dmx_[row_idx])):
+                if row_idx != j and j not in self.disids:
+                    dist = self.dmx_[row_idx][j]
+                    if mindis is None or dist > mindis:
+                        mindis = dist
                         objid = j
-                    elif self.dmx_[int(self.disids[i])][j] > mindis:
-                        mindis = self.dmx_[int(self.disids[i])][j]
-                        objid = j
-                    else:
-                        continue
-                else:
-                    continue
-
             if mindis is not None:
                 dis.append([mindis, objid])
-            else:
-                continue
-
-        # print "Time1: %.3f" % (time.time()-t)
-        # t = time.time()
-        # first column is the distance and second is the objectid
         dis = sorted(dis, key=lambda item: item[0])
-        # print "Time2: %.3f" % (time.time()-t)
-        # Select the object with the max distances
-        # between all the minimum distances list
-        # and this is the last object in list
         self.disids.append(dis[-1][-1])
-        # print "-"*10

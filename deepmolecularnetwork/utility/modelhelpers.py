@@ -5,16 +5,16 @@
 # the terms of the GNU General Public Licenze, version 3.
 # See the file LICENSE for details
 
-import sys
 from pathlib import Path
+import sys
+
 from deepmolecularnetwork.framework import load_model
 
+CREATE_MODEL_PY_MSG = "Please create a model.py file in your directory"
 
-def GetValidationFnc():
-    """
-    Get custom model from model.py file
 
-    """
+def get_validation_fnc():
+    """Get custom validation function from model.py in the current directory."""
     p = Path(".")
     sys.path.append("%s" % (str(p.absolute())))
     try:
@@ -22,16 +22,13 @@ def GetValidationFnc():
 
         return validation
     except ImportError:
-        print("Please create a model.py file in your directory")
+        print(CREATE_MODEL_PY_MSG)
         print("with a validation function which take as input a list of names.")
         return None
 
 
-def GetTrainTestFnc():
-    """
-    Get custom model from model.py file
-
-    """
+def get_train_test_fnc():
+    """Get custom train/test split function from model.py in current directory."""
     p = Path(".")
     sys.path.append("%s" % (str(p.absolute())))
     try:
@@ -39,7 +36,7 @@ def GetTrainTestFnc():
 
         return traintest
     except ImportError:
-        print("Please create a model.py file in your directory")
+        print(CREATE_MODEL_PY_MSG)
         print(
             "with a traintest function which take as input a list of names, "
             "the %test size and the random number initializator"
@@ -47,11 +44,8 @@ def GetTrainTestFnc():
         return None
 
 
-def GetKerasModel():
-    """
-    Get custom model from model.py file
-
-    """
+def get_keras_model():
+    """Get custom model builder function from model.py in current directory."""
     p = Path(".")
     sys.path.append("%s" % (str(p.absolute())))
     try:
@@ -59,33 +53,42 @@ def GetKerasModel():
 
         return build_model
     except ImportError:
-        print("Please create a model.py file in your directory")
+        print(CREATE_MODEL_PY_MSG)
         print("with a build_model function.")
         return None
 
 
+def _safe_load_model(target_path, **kwargs):
+    """Load model with fallback to compile=False if deserialization fails in Keras 3."""
+    try:
+        return load_model(str(target_path), **kwargs)
+    except Exception:
+        if kwargs.get("compile", True):
+            kwargs_no_compile = dict(kwargs)
+            kwargs_no_compile["compile"] = False
+            try:
+                return load_model(str(target_path), **kwargs_no_compile)
+            except Exception:
+                pass
+        raise
+
+
 def load_model_compat(model_path, **kwargs):
+    """Load Keras model supporting both .h5 and .keras extensions and Keras 2/3 serialization."""
     p = Path(model_path)
     if p.exists():
-        return load_model(str(p), **kwargs)
+        return _safe_load_model(p, **kwargs)
     keras_path = p.parent / f"{p.name}.keras"
     if keras_path.exists():
-        return load_model(str(keras_path), **kwargs)
+        return _safe_load_model(keras_path, **kwargs)
     h5_path = p.parent / f"{p.name}.h5"
     if h5_path.exists():
-        return load_model(str(h5_path), **kwargs)
-    return load_model(str(model_path), **kwargs)
+        return _safe_load_model(h5_path, **kwargs)
+    return _safe_load_model(model_path, **kwargs)
 
 
-def GetLoadModelFnc():
-    """
-    Get custom load model function in model.py file.
-    N.B.: the load function should have this fixed name with the
-          model path argument as input.
-
-        def load_personal_model(model_path):
-            ...
-    """
+def get_load_model_fnc():
+    """Get custom load model function from model.py or default compatibility loader."""
     p = Path(".")
     sys.path.append("%s" % (str(p.absolute())))
     try:
@@ -96,7 +99,8 @@ def GetLoadModelFnc():
         return load_model_compat
 
 
-def ReadDescriptorOrder(mpath):
+def read_descriptor_order(mpath):
+    """Read the feature ordering saved during model training."""
     odesc = []
     odesc_file = "%s/odesc_header.csv" % (str(Path(mpath).absolute()))
     if Path(odesc_file).exists():
@@ -106,20 +110,25 @@ def ReadDescriptorOrder(mpath):
     return odesc
 
 
-def LoadKerasModels(mpath):
-    """
-    function to load models produced using cross validation by
-    make1Dmodel.py, make3DCNNmodel.py, makeSMILESmodel.py
-    """
-    loadfnc = GetLoadModelFnc()
+def load_keras_models(mpath):
+    """Generator to load models produced using cross-validation."""
+    loadfnc = get_load_model_fnc()
     p = list(Path(mpath).glob("**/*.h5")) + list(Path(mpath).glob("**/*.keras"))
     files = [x for x in p if x.is_file()]
     for file_ in sorted(files):
         yield loadfnc(str(file_))
 
 
-def GetCudaDevices():
-    """
-    Get Free Cuda devices...
-    """
+def get_cuda_devices():
+    """Get Free Cuda devices."""
     return None
+
+
+# Backward compatible CamelCase aliases
+GetValidationFnc = get_validation_fnc
+GetTrainTestFnc = get_train_test_fnc
+GetKerasModel = get_keras_model
+GetLoadModelFnc = get_load_model_fnc
+ReadDescriptorOrder = read_descriptor_order
+LoadKerasModels = load_keras_models
+GetCudaDevices = get_cuda_devices

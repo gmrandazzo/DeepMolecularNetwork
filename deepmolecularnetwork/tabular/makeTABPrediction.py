@@ -6,6 +6,7 @@
 # See the file LICENSE for details
 
 import argparse
+from pathlib import Path
 import sys
 import numpy as np
 
@@ -23,60 +24,63 @@ class ModelPredictor:
         # are present in the previous loaded desc
         nf = []
         self.dmap = {}
-        for i in range(len(self.odesc)):
-            if self.odesc[i] in self.header:
-                self.dmap[self.odesc[i]] = i
+        for i, col in enumerate(self.odesc):
+            if col in self.header:
+                self.dmap[col] = i
             else:
-                nf.append(self.odesc[i])
+                nf.append(col)
         if len(nf) > 0:
             print("Error! Missing some descriptors")
             print("Prediction not possible!")
             print(nf)
-            exit()
-        return
+            sys.exit(1)
 
-    def GenData(self):
+    def gen_data(self):
+        """Generate aligned feature array for prediction."""
         batch_features = []
         for key in self.desc.keys():
-            x = [0 for i in range(len(self.odesc))]
+            x = [0.0] * len(self.odesc)
             for i in range(len(self.desc[key])):
-                if self.header[i] in self.dmap.keys():
+                if self.header[i] in self.dmap:
                     p = self.dmap[self.header[i]]
                     x[p] = self.desc[key][i]
-                else:
-                    continue
             batch_features.append(x)
         return np.array(batch_features)
 
-    def predict(self, pout):
-        predictions = {}
-        for key in self.keys:
-            predictions[key] = []
+    _LEGACY_ALIASES = {
+        "GenData": "gen_data",
+    }
 
-        x_topred = self.GenData()
+    def __getattr__(self, name: str):
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def predict(self, pout):
+        predictions = {key: [] for key in self.keys}
+
+        x_topred = self.gen_data()
         for model in LoadKerasModels(self.mpath):
             y_pred = list(model.predict(x_topred))
-            for i in range(len(y_pred)):
-                predictions[self.keys[i]].append(y_pred[i])
+            for i, pred in enumerate(y_pred):
+                predictions[self.keys[i]].append(pred)
 
-        fo = open(pout, "w")
-        for key in predictions.keys():
-            if len(predictions[key]) > 0:
-                ypavg = np.mean(predictions[key])
-                ystdev = np.std(predictions[key])
-                y_min = np.min(predictions[key])
-                y_max = np.max(predictions[key])
-                fo.write(f"{key},{ypavg:.4f},{ystdev:.4f},{y_min:.4f},{y_max:.4f}\n")
-            else:
-                continue
-        fo.close()
-        fo = open("all_y_%s" % (pout), "w")
-        for key in predictions.keys():
-            fo.write("%s," % (key))
-            for i in range(len(predictions[key]) - 1):
-                fo.write("%.4f," % (predictions[key][i]))
-            fo.write("%.4f\n" % (predictions[key][-1]))
-        fo.close()
+        pout_path = Path(pout)
+        with open(pout_path, "w") as fo:
+            for key, preds in predictions.items():
+                if len(preds) > 0:
+                    ypavg = float(np.mean(preds))
+                    ystdev = float(np.std(preds))
+                    y_min = float(np.min(preds))
+                    y_max = float(np.max(preds))
+                    fo.write(f"{key},{ypavg:.4f},{ystdev:.4f},{y_min:.4f},{y_max:.4f}\n")
+
+        all_y_path = pout_path.parent / f"all_y_{pout_path.name}"
+        with open(all_y_path, "w") as fo:
+            for key, preds in predictions.items():
+                if len(preds) > 0:
+                    formatted_preds = [f"{float(np.squeeze(val)):.4f}" for val in preds]
+                    fo.write(f"{key}," + ",".join(formatted_preds) + "\n")
 
 
 def main():

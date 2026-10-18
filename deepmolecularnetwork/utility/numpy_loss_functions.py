@@ -8,7 +8,7 @@
 import numpy as np
 
 
-def genMask(y_true, mask_value=-9999.0):
+def gen_mask(y_true, mask_value=-9999.0):
     """
     Generate a mask to be used in custom loss function
     with missing values in targets
@@ -22,7 +22,7 @@ def genMask(y_true, mask_value=-9999.0):
     return mask
 
 
-def MSE(y_true, y_pred, mask_value=-9999.0):
+def mse(y_true, y_pred, mask_value=-9999.0):
     """
     Calculate the Mean Squared Error with optional missing value masking.
     """
@@ -46,7 +46,7 @@ def MSE(y_true, y_pred, mask_value=-9999.0):
         return 0.0
 
 
-def MAE(y_true, y_pred, mask_value=-9999.0):
+def mae(y_true, y_pred, mask_value=-9999.0):
     """
     Calculate the Mean Absolute Error with optional missing value masking.
     """
@@ -70,7 +70,7 @@ def MAE(y_true, y_pred, mask_value=-9999.0):
         return 0.0
 
 
-def RSQ(y_true, y_pred, mask_value=-9999.0):
+def rsq(y_true, y_pred, mask_value=-9999.0):
     """
     Calculate the R-squared (R2 / Q2) with optional missing value masking.
     """
@@ -104,16 +104,16 @@ def RSQ(y_true, y_pred, mask_value=-9999.0):
         return 0.0
 
 
-def LOGMAE(y_true, y_pred, mask_value=-9999.0):
+def log_mae(y_true, y_pred, mask_value=-9999.0):
     """
     Log MAE
     """
-    return np.log(MAE(np.array(y_true), np.array(y_pred), mask_value))
+    return np.log(mae(np.array(y_true), np.array(y_pred), mask_value))
 
 
-# Snake_case aliases
-gen_mask = genMask
-mse = MSE
-mae = MAE
-rsq = RSQ
-log_mae = LOGMAE
+# Backward compatible aliases
+genMask = gen_mask
+MSE = mse
+MAE = mae
+RSQ = rsq
+LOGMAE = log_mae

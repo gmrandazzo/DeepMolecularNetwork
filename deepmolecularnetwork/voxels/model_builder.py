@@ -25,39 +25,33 @@ from deepmolecularnetwork.framework import (
     add,
     Layer,
     l2,
+    ops,
     optimizers,
 )
 from deepmolecularnetwork.voxels.resnet3d import Resnet3DBuilder
 
 
 # Loss function
-"""
-from sklearn.cross_decomposition import PLSRegression
-def custom_rmse(y_true, x_features):
-    pls2 = PLSRegression(n_components=3)
-    pls2.fit(x, y_true)
-    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
-"""
-
-
 def rmse(y_true, y_pred):
-    print(y_pred.shape)
-    print(y_true.shape)
-    return K.sqrt(K.mean(K.square(y_pred - y_true), axis=-1))
+    return ops.sqrt(ops.mean(ops.square(y_pred - y_true), axis=-1))
 
 
 def rsquared(y_true, y_pred):
-    SS_res = K.sum(K.square(y_true - y_pred), axis=-1)
-    SS_tot = K.sum(K.square(y_true - K.mean(y_true, axis=-1)), axis=-1)
-    return 1 - SS_res / (SS_tot + K.epsilon())
+    ss_res = ops.sum(ops.square(y_true - y_pred), axis=-1)
+    ss_tot = ops.sum(ops.square(y_true - ops.mean(y_true, axis=-1)), axis=-1)
+    return 1 - ss_res / (ss_tot + K.epsilon())
 
 
-def resnet3DModel(input_shape):
+def resnet3d_model(input_shape):
     K.set_image_data_format("channels_first")
     model = Resnet3DBuilder.build_resnet_18(input_shape, 1)
     model.compile(
         optimizer=optimizers.Adam(learning_rate=10**-5), loss="mae", metrics=["mse", "mae"]
     )
+    return model
+
+
+resnet3DModel = resnet3d_model
 
 
 def model_scirep(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
@@ -104,7 +98,7 @@ def model_scirep(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
     model.add(LeakyReLU())
 
     model.add(Flatten())
-    for i in range(ndense_layers):
+    for _ in range(ndense_layers):
         model.add(Dense(nunits))
         model.add(LeakyReLU())
     model.add(Dense(1))
@@ -112,7 +106,7 @@ def model_scirep(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
     return model
 
 
-def ResNetUnit(x, filters, pool=False):
+def resnet_unit(x, filters, pool=False):
     res = x
     if pool:
         x = MaxPooling3D(pool_size=(2, 2, 2))(x)
@@ -129,38 +123,20 @@ def ResNetUnit(x, filters, pool=False):
     return out
 
 
-def ResNetModel(input_shape):
+ResNetUnit = resnet_unit
+
+
+def resnet_model(input_shape):
     voxels = Input(input_shape)
     net = Conv3D(filters=2, kernel_size=[3, 3, 3], strides=[1, 1, 1], padding="same")(voxels)
-    net = ResNetUnit(net, 2)
-    net = ResNetUnit(net, 4, pool=True)
-    net = ResNetUnit(net, 4)
+    net = resnet_unit(net, 2)
+    net = resnet_unit(net, 4, pool=True)
+    net = resnet_unit(net, 4)
 
-    net = ResNetUnit(net, 8, pool=True)
-    net = ResNetUnit(net, 8)
-    """
-    net = self.ResNetUnit(net,256,pool=True)
-    net = self.ResNetUnit(net,256)
-    """
-    """
-    net = self.ResNetUnit(net,256)
-    net = self.ResNetUnit(net,128,pool=True)
-    net = self.ResNetUnit(net,128)
-    net = self.ResNetUnit(net,128)
-
-    net = self.ResNetUnit(net,64,pool=True)
-    net = self.ResNetUnit(net,64)
-    net = self.ResNetUnit(net,64)
-
-    net = self.ResNetUnit(net, 32,pool=True)
-    net = self.ResNetUnit(net, 32)
-    net = self.ResNetUnit(net, 32)
-    """
-
+    net = resnet_unit(net, 8, pool=True)
+    net = resnet_unit(net, 8)
     net = BatchNormalization()(net)
     net = Activation("relu")(net)
-    # net = Dropout(0.25)(net)
-
     net = AveragePooling3D(pool_size=(2, 2, 2))(net)
     net = Flatten()(net)
     net = Dense(32)(net)
@@ -174,6 +150,11 @@ def ResNetModel(input_shape):
 
 
 def build_shapenet10(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
+    """
+    Build ShapeNet10 model.
+    Parameter ndense_layers is accepted for signature compatibility.
+    """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -187,38 +168,25 @@ def build_shapenet10(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters
         Conv3D(nfilters, kernel_size=(5, 5, 5), kernel_regularizer=l2(0.001), strides=(2, 2, 2))
     )
     model.add(LeakyReLU())
-    # model.add(Dropout(0.2))
 
     model.add(Conv3D(nfilters, kernel_size=(3, 3, 3), kernel_regularizer=l2(0.001)))
     model.add(LeakyReLU())
     model.add(MaxPooling3D(pool_size=(2, 2, 2)))
-    # model.add(Dropout(0.3))
-
-    # model.add(BatchNormalization())
-    # model.add(LeakyReLU())
-    # model.add(Activation("relu"))
-    # model.add(AveragePooling3D(pool_size=(2,2,2)))
 
     model.add(Flatten())
     model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
     model.add(LeakyReLU())
-    # model.add(Dropout(0.4))
     model.add(Dense(1))
-    # model.compile(optimizer='rmsprop', loss='mse', metrics=['mse',
-    #                                                         'mae',
-    #                                                         rmse])
     model.compile(optimizer=optimizers.Adam(), loss="mse", metrics=["mse", "mae", rmse])
     return model
 
 
 def build_fcn_model(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
     """
-    Personal model
+    Personal model.
+    Parameters ndense_layers, nunits, nfilters are accepted for signature compatibility.
     """
+    _ = (ndense_layers, nunits, nfilters)
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -276,31 +244,29 @@ def build_custom_model(conv3d_chtype, input_shape, nunits, nfilters):
 
     voxels = Input(input_shape)
     net = BatchNormalization()(voxels)
-    net = Conv3D(filters=nfilters, kernel_size=[3, 3, 3])(voxels)
+    net = Conv3D(filters=nfilters, kernel_size=[3, 3, 3])(net)
     net = MaxPooling3D(pool_size=(2, 2, 2))(net)
     net = LeakyReLU()(net)
-    net = Conv3D(filters=nfilters, kernel_size=[3, 3, 3])(voxels)
+    net = Conv3D(filters=nfilters, kernel_size=[3, 3, 3])(net)
     net = MaxPooling3D(pool_size=(2, 2, 2))(net)
     net = LeakyReLU()(net)
     net = Flatten()(net)
     # what is net?
     # print(net)
     net = Dense(nunits)(net)
-    # net = MyLayer(nunits)(net)
     net = LeakyReLU()(net)
     net = Dense(1)(net)
     model = Model(inputs=voxels, outputs=net)
     model.compile(optimizer=optimizers.Adam(), loss="mae", metrics=["mse", "mae"])
+    return model
 
 
 def build_model_(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -329,40 +295,18 @@ def build_model_(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
 
     model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
     model.add(LeakyReLU())
-    # model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
-    # model.add(LeakyReLU())
-
-    """
-    model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
-    model.add(LeakyReLU())
-    model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
-    model.add(LeakyReLU())
-    model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
-    model.add(LeakyReLU())
-    """
-
-    """
-    model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
-    model.add(LeakyReLU())
-    """
     model.add(Dense(1))
-    """
-    model.compile(optimizer=optimizers.Adam(learning_rate=0.00001), loss='mse', metrics=['mse',
-                                                                             'mae'])
-    """
     model.compile(optimizer=optimizers.Adam(), loss="mse", metrics=["mse", "mae"])
 
     return model
 
 
 def build_model_garbage(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -371,67 +315,28 @@ def build_model_garbage(conv3d_chtype, input_shape, ndense_layers, nunits, nfilt
 
     model = Sequential()
     model.add(BatchNormalization(input_shape=input_shape))
-    # input_shape=input_shape,
 
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
-    # model.add(LeakyReLU())
     model.add(Activation("relu"))
-    # model.add(MaxPooling3D(pool_size=(2, 2, 2)))
 
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
-    # model.add(LeakyReLU())
     model.add(Activation("relu"))
 
     model.add(MaxPooling3D(pool_size=(2, 2, 2)))
 
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
-    # model.add(LeakyReLU())
     model.add(Activation("relu"))
 
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
-    # model.add(LeakyReLU())
     model.add(Activation("relu"))
 
     model.add(MaxPooling3D(pool_size=(2, 2, 2)))
 
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
-    # model.add(LeakyReLU())
     model.add(Activation("relu"))
 
-    # model.add(MaxPooling3D(pool_size=(2, 2, 2)))
-
-    # model.add(AveragePooling3D(pool_size=(2, 2, 2)))
-
-    """
-    model.add(Conv3D(nfilters*2,
-                     kernel_size=(2, 2, 2),
-                     strides=(1,1,1)))
-    #model.add(LeakyReLU())
-    model.add(Activation("relu"))
-    model.add(MaxPooling3D(pool_size=(2, 2, 2)))
-    """
-
-    # model.add(AveragePooling3D(pool_size=(4, 4, 4)))
-
-    """
-    model.add(Conv3D(nfilters*2,
-                     kernel_size=(4, 4, 4),
-                     strides=(1,1,1)))
-    model.add(LeakyReLU())
-    model.add(AveragePooling3D(pool_size=(2, 2, 2)))
-
-
-    model.add(Conv3D(nfilters*2,
-                     kernel_size=(2, 2, 2),
-                     strides=(1,1,1)))
-    model.add(LeakyReLU())
-    model.add(AveragePooling3D(pool_size=(2, 2, 2)))
-    """
-
-    # model.add(MaxPooling3D(pool_size=(3, 3, 3)))
     model.add(Flatten())
 
-    # model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
     model.add(Dense(nunits))
     model.add(Activation("relu"))
 
@@ -440,13 +345,6 @@ def build_model_garbage(conv3d_chtype, input_shape, ndense_layers, nunits, nfilt
 
     model.add(Dense(nunits))
     model.add(Activation("relu"))
-
-    # model.add(Dense(int(nunits/2), kernel_regularizer=l2(0.001)))
-    # model.add(Dense(nunits))
-    # model.add(LeakyReLU())
-
-    # model.add(Dense(nunits))
-    # model.add(LeakyReLU())
 
     model.add(Dense(1))
 
@@ -458,13 +356,11 @@ def build_model_garbage(conv3d_chtype, input_shape, ndense_layers, nunits, nfilt
 
 
 def build_model_okg25s25(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -473,7 +369,6 @@ def build_model_okg25s25(conv3d_chtype, input_shape, ndense_layers, nunits, nfil
 
     model = Sequential()
     model.add(BatchNormalization(input_shape=input_shape))
-    # input_shape=input_shape,
     model.add(Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1)))
     model.add(LeakyReLU())
 
@@ -483,23 +378,11 @@ def build_model_okg25s25(conv3d_chtype, input_shape, ndense_layers, nunits, nfil
 
     model.add(AveragePooling3D(pool_size=(2, 2, 2)))
 
-    """
-    model.add(Conv3D(nfilters*4,
-                     kernel_size=(2, 2, 2),
-                     strides=(1,1,1)))
-    model.add(LeakyReLU())
-
-    model.add(AveragePooling3D(pool_size=(2, 2, 2)))
-    """
-
-    # model.add(MaxPooling3D(pool_size=(3, 3, 3)))
     model.add(Flatten())
 
-    # model.add(Dense(nunits, kernel_regularizer=l2(0.001)))
     model.add(Dense(nunits))
     model.add(LeakyReLU())
 
-    # model.add(Dense(int(nunits/2), kernel_regularizer=l2(0.001)))
     model.add(Dense(nunits))
     model.add(LeakyReLU())
 
@@ -511,21 +394,16 @@ def build_model_okg25s25(conv3d_chtype, input_shape, ndense_layers, nunits, nfil
     model.compile(
         optimizer=optimizers.Adam(learning_rate=0.00001), loss="mse", metrics=["mse", "mae"]
     )
-    """
-    model.compile(optimizer=optimizers.Adam(), loss='mse', metrics=['mse', 'mae'])
-    """
 
     return model
 
 
-def build_model_not_well_Working(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
+def build_model_not_well_working(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -560,19 +438,19 @@ def build_model_not_well_Working(conv3d_chtype, input_shape, ndense_layers, nuni
     model.compile(
         optimizer=optimizers.Adam(learning_rate=0.00001), loss="mse", metrics=["mse", "mae"]
     )
-    # Adagrad ok 0.64
 
     return model
 
 
-def build_model(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
+build_model_not_well_Working = build_model_not_well_working
 
+
+def build_model(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -597,28 +475,21 @@ def build_model(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
 
     model.add(Dense(int(nunits / 2), kernel_regularizer=l2(0.001)))
     model.add(LeakyReLU())
-    """
-    model.add(Dense(nunits, kernel_regularizer=l3(0.001)))
-    model.add(LeakyReLU())
-    """
     model.add(Dense(1))
 
     model.compile(
         optimizer=optimizers.Adam(learning_rate=0.00001), loss="mse", metrics=["mse", "mae"]
     )
-    # Adagrad ok 0.64
 
     return model
 
 
 def build_model_orig(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters):
-    # Because we will need to instantiate
-    # the same model multiple times,
-    # we use a function to construct it.
-
     """
-    Personal model
+    Personal model.
+    Parameter ndense_layers is accepted for signature compatibility.
     """
+    _ = ndense_layers
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
         K.set_image_data_format("channels_last")
@@ -645,11 +516,14 @@ def build_model_orig(conv3d_chtype, input_shape, ndense_layers, nunits, nfilters
     return model
 
 
-def build_2DData_model(conv3d_chtype, input_shape1, input_shape2, ndense_layers, nunits, nfilters):
+def build_2d_data_model(
+    conv3d_chtype, input_shape1, input_shape2, ndense_layers=None, nunits=100, nfilters=16
+):
     """
-    Working with keras 2.2.4
+    Working with keras 2.2.4+ and Keras 3
     Personal model
     """
+    _ = ndense_layers
     alpha = 0.3
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
@@ -657,7 +531,7 @@ def build_2DData_model(conv3d_chtype, input_shape1, input_shape2, ndense_layers,
     else:
         K.set_image_data_format("channels_first")
 
-    "Model branch 1"
+    # Model branch 1
     in1 = Input(shape=input_shape1)
     m1 = BatchNormalization()(in1)
     m1 = Conv3D(nfilters, kernel_size=(2, 2, 2), strides=(1, 1, 1))(m1)
@@ -670,7 +544,7 @@ def build_2DData_model(conv3d_chtype, input_shape1, input_shape2, ndense_layers,
 
     m1 = Flatten()(m1)
 
-    "Model branch 2"
+    # Model branch 2
     in2 = Input(shape=(input_shape2,))
     m2 = Dense(nunits)(in2)
     m2 = LeakyReLU(alpha)(m2)
@@ -679,7 +553,7 @@ def build_2DData_model(conv3d_chtype, input_shape1, input_shape2, ndense_layers,
     m2 = Dense(nunits)(m2)
     m2 = LeakyReLU(alpha)(m2)
 
-    "Concatenation"
+    # Concatenation
     concat = Concatenate()([m1, m2])
 
     out = Dense(nunits)(concat)
@@ -703,13 +577,14 @@ def build_2DData_model(conv3d_chtype, input_shape1, input_shape2, ndense_layers,
     return fmodel
 
 
-def build_2DData_model_old(
-    conv3d_chtype, input_shape1, input_shape2, ndense_layers, nunits, nfilters
+def build_2d_data_model_old(
+    conv3d_chtype, input_shape1, input_shape2, ndense_layers=None, nunits=100, nfilters=16
 ):
     """
-    Working with keras 2.2.4
+    Working with keras 2.2.4+ and Keras 3
     Personal model
     """
+    _ = ndense_layers
     alpha = 0.3
     print(conv3d_chtype)
     if "last" in conv3d_chtype:
@@ -717,7 +592,7 @@ def build_2DData_model_old(
     else:
         K.set_image_data_format("channels_first")
 
-    "Model branch 1"
+    # Model branch 1
     in1 = Input(shape=input_shape1)
     m1 = BatchNormalization()(in1)
     m1 = Conv3D(nfilters, kernel_size=(3, 3, 3), kernel_regularizer=l2(0.001))(m1)
@@ -728,12 +603,12 @@ def build_2DData_model_old(
     m1 = MaxPooling3D(pool_size=(3, 3, 3))(m1)
     m1 = Flatten()(m1)
 
-    "Model branch 2"
+    # Model branch 2
     in2 = Input(shape=(input_shape2,))
     m2 = Dense(2)(in2)
     m2 = LeakyReLU(alpha)(m2)
 
-    "Concatenation"
+    # Concatenation
     concat = Concatenate()([m1, m2])
 
     out = Dense(nunits, kernel_regularizer=l2(0.001))(concat)
@@ -750,10 +625,8 @@ def build_2DData_model_old(
     fmodel.compile(
         optimizer=optimizers.Adam(learning_rate=0.00001), loss="mse", metrics=["mse", "mae"]
     )
-
-    """
-    fmodel.compile(optimizer=optimizers.Adam(), loss='mse', metrics=['mse',
-                                                                     'mae',
-                                                                     rmse])
-    """
     return fmodel
+
+
+build_2DData_model = build_2d_data_model
+build_2DData_model_old = build_2d_data_model_old
