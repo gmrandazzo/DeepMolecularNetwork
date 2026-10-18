@@ -16,7 +16,7 @@ on:
 jobs:
   code-quality:
     name: 1. Code Quality & Linting
-    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -39,7 +39,7 @@ jobs:
   unit-tests:
     name: 2. Unit Tests & Coverage (${{ matrix.python-version }} - ${{ matrix.keras-target }})
     needs: code-quality
-    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +85,7 @@ jobs:
   sonarqube:
     name: 3. SonarQube (Code & Security Analysis)
     needs: [code-quality, unit-tests]
-    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -117,7 +117,7 @@ jobs:
     needs: [unit-tests, sonarqube]
     # Build package only on tagged releases (e.g., v0.2.0) or manual workflow dispatch
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
-    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -150,7 +150,7 @@ jobs:
   publish:
     name: 5. Publish package to PyPI
     needs: build
-    runs-on: ${{ vars.CI_RUNNER || 'self-hosted' }}
+    runs-on: ubuntu-latest
     # Publish on tagged releases (e.g., v0.2.0) or manual workflow dispatch
     if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
     environment:
