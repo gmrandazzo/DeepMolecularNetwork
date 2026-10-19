@@ -1,2 +1,0 @@
-# Local editable installation of deepmolecularnetwork with Keras 3 and dev dependencies
--e .[keras3,dev]

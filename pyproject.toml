@@ -10,9 +10,12 @@ readme = "README.md"
 authors = [
     { name = "Giuseppe Marco Randazzo", email = "gmrandazzo@gmail.com" }
 ]
-license = { text = "GPL-3.0-or-later" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -29,6 +32,18 @@ dependencies = [
     "h5py>=3.6.0",
     "pillow>=9.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/gmrandazzo/DeepMolecularNetwork"
+Repository = "https://github.com/gmrandazzo/DeepMolecularNetwork"
+"Bug Tracker" = "https://github.com/gmrandazzo/DeepMolecularNetwork/issues"
+
+[project.scripts]
+dmn-makednndb = "deepmolecularnetwork.tabular.makeDNNDB:main"
+dmn-makeohedb = "deepmolecularnetwork.OneHotEncodingModeling.makeOHEDatabase:main"
+dmn-ohepredict = "deepmolecularnetwork.ohe.predict:main"
+dmn-smi2ohe = "deepmolecularnetwork.SMILESModeling.SMI2OHEMatrix:main"
+dmn-img2dvis = "deepmolecularnetwork.images2d.visualize:main"
 
 [project.optional-dependencies]
 keras2 = [
