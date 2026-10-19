@@ -13,18 +13,32 @@ keras-resnet (See https://github.com/raghakot/keras-resnet.)
 
 from deepmolecularnetwork.framework import keras, layers, models, regularizers
 
-K = keras.backend
-l2 = regularizers.l2
-BatchNormalization = layers.BatchNormalization
-add = layers.add
-Model = models.Model
-Input = layers.Input
-Activation = layers.Activation
-Dense = layers.Dense
-Flatten = layers.Flatten
-Conv3D = layers.Conv3D
-AveragePooling3D = layers.AveragePooling3D
-MaxPooling3D = layers.MaxPooling3D
+if keras is not None:
+    K = keras.backend
+    l2 = regularizers.l2 if regularizers is not None else None
+    BatchNormalization = layers.BatchNormalization if layers is not None else None
+    add = layers.add if layers is not None else None
+    Model = models.Model if models is not None else None
+    Input = layers.Input if layers is not None else None
+    Activation = layers.Activation if layers is not None else None
+    Dense = layers.Dense if layers is not None else None
+    Flatten = layers.Flatten if layers is not None else None
+    Conv3D = layers.Conv3D if layers is not None else None
+    AveragePooling3D = layers.AveragePooling3D if layers is not None else None
+    MaxPooling3D = layers.MaxPooling3D if layers is not None else None
+else:
+    K = None
+    l2 = None
+    BatchNormalization = None
+    add = None
+    Model = None
+    Input = None
+    Activation = None
+    Dense = None
+    Flatten = None
+    Conv3D = None
+    AveragePooling3D = None
+    MaxPooling3D = None
 
 DIM1_AXIS = 1
 DIM2_AXIS = 2
@@ -44,7 +58,9 @@ def _conv_bn_relu_3d(**conv_params):
     strides = conv_params.setdefault("strides", (1, 1, 1))
     kernel_initializer = conv_params.setdefault("kernel_initializer", "he_normal")
     padding = conv_params.setdefault("padding", "same")
-    kernel_regularizer = conv_params.setdefault("kernel_regularizer", l2(1e-4))
+    kernel_regularizer = conv_params.setdefault(
+        "kernel_regularizer", l2(1e-4) if l2 is not None else None
+    )
 
     def f(input_tensor):
         conv = Conv3D(
@@ -70,7 +86,9 @@ def _bn_relu_conv3d(**conv_params):
     strides = conv_params.setdefault("strides", (1, 1, 1))
     kernel_initializer = conv_params.setdefault("kernel_initializer", "he_normal")
     padding = conv_params.setdefault("padding", "same")
-    kernel_regularizer = conv_params.setdefault("kernel_regularizer", l2(1e-4))
+    kernel_regularizer = conv_params.setdefault(
+        "kernel_regularizer", l2(1e-4) if l2 is not None else None
+    )
 
     def f(input_tensor):
         activation = _bn_relu(input_tensor)
@@ -129,9 +147,11 @@ def _residual_block3d(
 
 
 def basic_block(
-    filters, strides=(1, 1, 1), kernel_regularizer=l2(1e-4), is_first_block_of_first_layer=False
+    filters, strides=(1, 1, 1), kernel_regularizer=None, is_first_block_of_first_layer=False
 ):
     """Basic 3 X 3 X 3 convolution blocks. Extended from raghakot's 2D impl."""
+    if kernel_regularizer is None and l2 is not None:
+        kernel_regularizer = l2(1e-4)
 
     def f(input_tensor):
         if is_first_block_of_first_layer:
@@ -161,9 +181,11 @@ def basic_block(
 
 
 def bottleneck(
-    filters, strides=(1, 1, 1), kernel_regularizer=l2(1e-4), is_first_block_of_first_layer=False
+    filters, strides=(1, 1, 1), kernel_regularizer=None, is_first_block_of_first_layer=False
 ):
     """Basic 3 X 3 X 3 convolution blocks. Extended from raghakot's 2D impl."""
+    if kernel_regularizer is None and l2 is not None:
+        kernel_regularizer = l2(1e-4)
 
     def f(input_tensor):
         if is_first_block_of_first_layer:
@@ -201,7 +223,11 @@ def _handle_data_format():
     global DIM2_AXIS
     global DIM3_AXIS
     global CHANNEL_AXIS
-    if K.image_data_format() == "channels_last":
+    if (
+        K is not None
+        and hasattr(K, "image_data_format")
+        and K.image_data_format() == "channels_last"
+    ):
         DIM1_AXIS = 1
         DIM2_AXIS = 2
         DIM3_AXIS = 3
