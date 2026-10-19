@@ -40,7 +40,7 @@ class ModelPredictor:
         """
         self.mpath = mpath
         self.s2m = SMILES2MX(padding)
-        self.X, self.input_shape = self.ReadSMILES(smiles_path)
+        self.X, self.input_shape = self.read_smiles(smiles_path)
 
         if csv_descriptors is not None:
             self.desc, self.nfeatures, self.header = ReadDescriptors(str(csv_descriptors))
@@ -52,7 +52,7 @@ class ModelPredictor:
             self.header = []
             self.keys = list(self.X.keys())
 
-    def ReadSMILES(self, smiles_list: str | Path) -> tuple[dict[str, np.ndarray], tuple[int, ...]]:
+    def read_smiles(self, smiles_list: str | Path) -> tuple[dict[str, np.ndarray], tuple[int, ...]]:
         """Read a SMILES file into a dictionary of 2D OHE matrices."""
         dataset: dict[str, np.ndarray] = {}
         with open(smiles_list, encoding="utf-8") as f:
@@ -69,7 +69,9 @@ class ModelPredictor:
 
         return dataset, self.s2m.getshape()
 
-    def GenData(self) -> np.ndarray | list[np.ndarray]:
+    ReadSMILES = read_smiles
+
+    def gen_data(self) -> np.ndarray | list[np.ndarray]:
         """Prepare batch tensor(s) for prediction."""
         batch_ohe = [self.X[k] for k in self.keys]
         arr_ohe = np.asarray(batch_ohe, dtype=np.float32)[:, :, :, np.newaxis]
@@ -81,6 +83,8 @@ class ModelPredictor:
 
         return arr_ohe
 
+    GenData = gen_data
+
     def predict(self, pout: str | Path | None = None) -> dict[str, dict[str, float]]:
         """Compute predictions across loaded ensemble models.
 
@@ -90,11 +94,11 @@ class ModelPredictor:
         Returns:
             Dictionary mapping molecule key to summary statistics (mean, std, min, max).
         """
-        models = LoadKerasModels(str(self.mpath))
+        models = list(LoadKerasModels(str(self.mpath)))
         if not models:
             raise FileNotFoundError(f"No valid models found at '{self.mpath}'")
 
-        x_topred = self.GenData()
+        x_topred = self.gen_data()
         raw_predictions: dict[str, list[float]] = {k: [] for k in self.keys}
 
         for model in models:

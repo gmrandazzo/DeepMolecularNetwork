@@ -60,7 +60,7 @@ def example_build_model(
     return model
 
 
-def example_build_2DData_model(
+def example_build_2d_data_model(
     dshape: tuple[int, ...],
     input_shape2: int,
     nfilters: int = 32,
@@ -94,6 +94,10 @@ def example_build_2DData_model(
     optimizer = create_adam(learning_rate=learning_rate)
     fmodel.compile(optimizer=optimizer, loss="mse", metrics=["mse", "mae"])
     return fmodel
+
+
+# Backward compatibility alias
+example_build_2DData_model = example_build_2d_data_model
 
 
 def build_gridsearch_model(
@@ -155,12 +159,64 @@ class NNTrain:
                 self.tgtshape = len(first_val)
 
         self.dx = dx
-        self.n_descs = (
-            n_descs if n_descs is not None else (len(next(iter(dx.values()))) if dx else 0)
-        )
+        if n_descs is not None:
+            self.n_descs = n_descs
+        elif dx:
+            self.n_descs = len(next(iter(dx.values())))
+        else:
+            self.n_descs = 0
         self.verbose = 1
 
-    def GenData(
+    def _gen_multimodal_data(
+        self, keys: list[str]
+    ) -> tuple[list[np.ndarray], np.ndarray, list[str]]:
+        assert self.dx is not None
+        ret_keys: list[str] = []
+        batch_x_ohe: list[np.ndarray] = []
+        batch_x_desc: list[Any] = []
+        batch_y: list[Any] = []
+
+        for key in keys:
+            if key not in self.target or key not in self.dx or key not in self.db.X:
+                continue
+            tval = self.target[key]
+            cfeat = self.dx[key]
+            smiohes = self.db.X[key].getData()
+            smiohe = smiohes if getattr(smiohes, "ndim", 2) == 2 else smiohes[0]
+            batch_y.append(tval)
+            batch_x_ohe.append(smiohe)
+            batch_x_desc.append(cfeat)
+            ret_keys.append(key)
+
+        arr_ohe = np.asarray(batch_x_ohe, dtype=np.float32)
+        if arr_ohe.ndim == 3:
+            arr_ohe = arr_ohe[:, :, :, np.newaxis]
+        arr_desc = np.asarray(batch_x_desc, dtype=np.float32)
+        arr_y = np.asarray(batch_y, dtype=np.float32)
+        return [arr_ohe, arr_desc], arr_y, ret_keys
+
+    def _gen_unimodal_data(self, keys: list[str]) -> tuple[np.ndarray, np.ndarray, list[str]]:
+        ret_keys: list[str] = []
+        batch_features: list[np.ndarray] = []
+        batch_target: list[Any] = []
+
+        for key in keys:
+            if key not in self.target or key not in self.db.X:
+                continue
+            tval = self.target[key]
+            smiohes = self.db.X[key].getData()
+            smiohe = smiohes if getattr(smiohes, "ndim", 2) == 2 else smiohes[0]
+            batch_target.append(tval)
+            batch_features.append(smiohe)
+            ret_keys.append(key)
+
+        arr_feat = np.asarray(batch_features, dtype=np.float32)
+        if arr_feat.ndim == 3:
+            arr_feat = arr_feat[:, :, :, np.newaxis]
+        arr_y = np.asarray(batch_target, dtype=np.float32)
+        return arr_feat, arr_y, ret_keys
+
+    def gen_data(
         self, keys: list[str]
     ) -> tuple[np.ndarray | list[np.ndarray], np.ndarray, list[str]]:
         """Extract batches of features and targets for given molecule keys.
@@ -172,49 +228,10 @@ class NNTrain:
             Tuple of (features, target_array, valid_keys).
         """
         if self.dx is not None:
-            ret_keys: list[str] = []
-            batch_x_ohe: list[np.ndarray] = []
-            batch_x_desc: list[Any] = []
-            batch_y: list[Any] = []
+            return self._gen_multimodal_data(keys)
+        return self._gen_unimodal_data(keys)
 
-            for key in keys:
-                if key not in self.target or key not in self.dx or key not in self.db.X:
-                    continue
-                tval = self.target[key]
-                cfeat = self.dx[key]
-                smiohes = self.db.X[key].getData()
-                smiohe = smiohes if getattr(smiohes, "ndim", 2) == 2 else smiohes[0]
-                batch_y.append(tval)
-                batch_x_ohe.append(smiohe)
-                batch_x_desc.append(cfeat)
-                ret_keys.append(key)
-
-            arr_ohe = np.asarray(batch_x_ohe, dtype=np.float32)
-            if arr_ohe.ndim == 3:
-                arr_ohe = arr_ohe[:, :, :, np.newaxis]
-            arr_desc = np.asarray(batch_x_desc, dtype=np.float32)
-            arr_y = np.asarray(batch_y, dtype=np.float32)
-            return [arr_ohe, arr_desc], arr_y, ret_keys
-        else:
-            ret_keys = []
-            batch_features: list[np.ndarray] = []
-            batch_target: list[Any] = []
-
-            for key in keys:
-                if key not in self.target or key not in self.db.X:
-                    continue
-                tval = self.target[key]
-                smiohes = self.db.X[key].getData()
-                smiohe = smiohes if getattr(smiohes, "ndim", 2) == 2 else smiohes[0]
-                batch_target.append(tval)
-                batch_features.append(smiohe)
-                ret_keys.append(key)
-
-            arr_feat = np.asarray(batch_features, dtype=np.float32)
-            if arr_feat.ndim == 3:
-                arr_feat = arr_feat[:, :, :, np.newaxis]
-            arr_y = np.asarray(batch_target, dtype=np.float32)
-            return arr_feat, arr_y, ret_keys
+    GenData = gen_data
 
     def simplerun(
         self,
@@ -241,15 +258,15 @@ class NNTrain:
             if custom_builder is not None:
                 model = custom_builder(input_shape, self.n_descs, nfilters, nunits)
             else:
-                model = example_build_2DData_model(input_shape, self.n_descs, nfilters, nunits)
+                model = example_build_2d_data_model(input_shape, self.n_descs, nfilters, nunits)
         else:
             if custom_builder is not None:
                 model = custom_builder(input_shape, nfilters, nunits)
             else:
                 model = example_build_model(input_shape, nfilters, nunits)
 
-        x_train, y_train, _ = self.GenData(train_keys)
-        x_test, y_test, _ = self.GenData(test_keys)
+        x_train, y_train, _ = self.gen_data(train_keys)
+        x_test, y_test, _ = self.gen_data(test_keys)
 
         model.fit(
             x_train,
