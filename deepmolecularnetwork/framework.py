@@ -146,3 +146,12 @@ def save_model_compat(model, filepath, **kwargs):
         p = p + ".keras"
     model.save(p, **kwargs)
     return p
+
+
+def load_model_compat(filepath, **kwargs):
+    """
+    Load a model across Keras 2 and Keras 3 with format fallback.
+    """
+    from deepmolecularnetwork.utility.modelhelpers import load_model_compat as _load_compat
+
+    return _load_compat(filepath, **kwargs)
