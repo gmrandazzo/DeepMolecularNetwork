@@ -134,6 +134,15 @@ def build_gridsearch_model(
 class NNTrain:
     """Training pipeline for One-Hot Encoded and multi-modal molecular networks."""
 
+    _LEGACY_ALIASES = {
+        "GenData": "gen_data",
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
     def __init__(
         self,
         ohedb_path: str | Path,
@@ -150,7 +159,7 @@ class NNTrain:
             n_descs: Number of tabular descriptors.
         """
         self.db = OHEDatabase()
-        self.db.loadOHEdb(ohedb_path)
+        self.db.load_ohe_db(ohedb_path)
         self.target = target
         self.tgtshape = 1
         if target:
@@ -230,8 +239,6 @@ class NNTrain:
         if self.dx is not None:
             return self._gen_multimodal_data(keys)
         return self._gen_unimodal_data(keys)
-
-    GenData = gen_data
 
     def simplerun(
         self,

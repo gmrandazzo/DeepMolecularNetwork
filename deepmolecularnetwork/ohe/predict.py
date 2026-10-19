@@ -10,6 +10,7 @@ import argparse
 import logging
 from pathlib import Path
 import sys
+from typing import Any
 
 import numpy as np
 
@@ -22,6 +23,16 @@ logger = logging.getLogger(__name__)
 
 class ModelPredictor:
     """Inference engine for models trained on SMILES/OHE and tabular descriptors."""
+
+    _LEGACY_ALIASES = {
+        "ReadSMILES": "read_smiles",
+        "GenData": "gen_data",
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __init__(
         self,
@@ -69,8 +80,6 @@ class ModelPredictor:
 
         return dataset, self.s2m.getshape()
 
-    ReadSMILES = read_smiles
-
     def gen_data(self) -> np.ndarray | list[np.ndarray]:
         """Prepare batch tensor(s) for prediction."""
         batch_ohe = [self.X[k] for k in self.keys]
@@ -82,8 +91,6 @@ class ModelPredictor:
             return [arr_ohe, arr_desc]
 
         return arr_ohe
-
-    GenData = gen_data
 
     def predict(self, pout: str | Path | None = None) -> dict[str, dict[str, float]]:
         """Compute predictions across loaded ensemble models.

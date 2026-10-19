@@ -94,8 +94,15 @@ class DBFile:
             self._dbf = np.load(self.fname, mmap_mode="r")
         return self._dbf
 
-    # Backward-compatible alias
-    getData = get_data
+    _LEGACY_ALIASES = {
+        "getData": "get_data",
+        "getShape": "get_shape",
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def get_shape(self) -> tuple[int, ...]:
         """Return array shape without loading entire contents into memory."""
@@ -104,6 +111,18 @@ class DBFile:
 
 class OHEDatabase:
     """Manager for saving, loading, and sampling One-Hot Encoded molecular databases."""
+
+    _LEGACY_ALIASES = {
+        "saveOHEdb": "save_ohe_db",
+        "loadOHEdb": "load_ohe_db",
+        "loadOHEdbFromCSVDir": "load_ohe_db_from_csv_dir",
+        "getRandomSample": "get_random_sample",
+    }
+
+    def __getattr__(self, name: str) -> Any:
+        if name in self._LEGACY_ALIASES:
+            return getattr(self, self._LEGACY_ALIASES[name])
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __init__(self) -> None:
         """Initialize empty database."""
@@ -124,9 +143,6 @@ class OHEDatabase:
             fdb = target_path / f"{key}.npy"
             data = arr.get_data() if isinstance(arr, DBFile) else arr
             np.save(fdb, data)
-
-    # Backward-compatible alias
-    saveOHEdb = save_ohe_db
 
     def load_ohe_db(self, dbpath: str | Path) -> None:
         """Load database entries from a directory containing .npy files.
@@ -151,9 +167,6 @@ class OHEDatabase:
         self.input_shape = first_shape[1:] if len(first_shape) == 3 else first_shape
         self.ninstances = len(self.X)
 
-    # Backward-compatible alias
-    loadOHEdb = load_ohe_db
-
     def load_ohe_db_from_csv_dir(self, ohe_dir: str | Path) -> None:
         """Populate database from a directory of CSV files.
 
@@ -162,9 +175,6 @@ class OHEDatabase:
         """
         self.X, self.input_shape = load_one_hot_encoding_csv_dir(ohe_dir)
         self.ninstances = len(self.X)
-
-    # Backward-compatible alias
-    loadOHEdbFromCSVDir = load_ohe_db_from_csv_dir
 
     def get_random_sample(
         self,
@@ -208,6 +218,3 @@ class OHEDatabase:
             raise TypeError(f"Type {type(a)} not supported for getRandomSample")
 
         return sub_x
-
-    # Backward-compatible alias
-    getRandomSample = get_random_sample
