@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepmolecularnetwork"
-version = "0.2.1"
+version = "0.3.0"
 description = "A deep learning framework for QSAR/QSPR modeling with 3D voxels, tabular descriptors, and molecular representations"
 readme = "README.md"
 authors = [
