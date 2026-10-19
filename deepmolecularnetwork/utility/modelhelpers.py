@@ -111,9 +111,13 @@ def read_descriptor_order(mpath):
 
 
 def load_keras_models(mpath):
-    """Generator to load models produced using cross-validation."""
+    """Generator to load models produced using cross-validation or single model file."""
     loadfnc = get_load_model_fnc()
-    p = list(Path(mpath).glob("**/*.h5")) + list(Path(mpath).glob("**/*.keras"))
+    p_path = Path(mpath)
+    if p_path.is_file():
+        yield loadfnc(str(p_path))
+        return
+    p = list(p_path.glob("**/*.h5")) + list(p_path.glob("**/*.keras"))
     files = [x for x in p if x.is_file()]
     for file_ in sorted(files):
         yield loadfnc(str(file_))

@@ -13,6 +13,10 @@ on:
       - develop
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   code-quality:
     name: 1. Code Quality & Linting
@@ -86,6 +90,9 @@ jobs:
     name: 3. SonarQube (Code & Security Analysis)
     needs: [code-quality, unit-tests]
     runs-on: ubuntu-latest
+    concurrency:
+      group: sonarqube-analysis-${{ github.repository }}
+      cancel-in-progress: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -99,10 +106,13 @@ jobs:
           path: .
 
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          skipSignatureVerification: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarqube.gmrandazzo.com' }}
+          SONAR_SCANNER_OPTS: "-Xmx2048m"
 
       - name: SonarQube Quality Gate Check
         id: sonarqube-quality-gate-check

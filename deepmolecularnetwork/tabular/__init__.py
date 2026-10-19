@@ -10,6 +10,7 @@ from deepmolecularnetwork.tabular.makeTABModel import (
 from deepmolecularnetwork.tabular.makeTABPrediction import ModelPredictor
 from deepmolecularnetwork.tabular.DNNDB import AddDNNDatabase, LoadDNNDatabase
 from deepmolecularnetwork.tabular.dnnresnet import dnn_resnet_layer
+from deepmolecularnetwork.tabular.makeDNNDB import create_dnn_database
 
 __all__ = [
     "NNTrain",
@@ -19,4 +20,5 @@ __all__ = [
     "AddDNNDatabase",
     "LoadDNNDatabase",
     "dnn_resnet_layer",
+    "create_dnn_database",
 ]
