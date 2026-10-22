@@ -10,13 +10,14 @@ import sys
 from deepmolecularnetwork.ohe.smiles2matrix import SMILES2MX
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     """Read SMILES file and generate OHE CSV."""
-    if len(sys.argv) == 4:
-        s = SMILES2MX(int(sys.argv[2]))
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) == 3:
+        s = SMILES2MX(int(args[1]))
         with (
-            open(sys.argv[1], encoding="utf-8") as fi,
-            open(sys.argv[3], "w", encoding="utf-8") as fo,
+            open(args[0], encoding="utf-8") as fi,
+            open(args[2], "w", encoding="utf-8") as fo,
         ):
             for line in fi:
                 stripped = line.strip()
@@ -27,9 +28,11 @@ def main() -> None:
                 for row in m:
                     fo.write(",".join(str(val) for val in row) + "\n")
                 fo.write("END\n")
-    else:
-        print(f"\nUsage {sys.argv[0]} [smiles] [max padding (int)] [csv output]\n")
+        return 0
+
+    print("\nUsage: SMI2OHEMatrix [smiles file] [max padding (int)] [csv output]\n")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

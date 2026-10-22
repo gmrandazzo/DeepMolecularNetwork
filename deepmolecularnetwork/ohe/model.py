@@ -6,8 +6,11 @@
 # See the file LICENSE for details
 """Neural network model architectures and training pipelines for One-Hot Encoded data."""
 
+import argparse
 import logging
 from pathlib import Path
+import random
+import sys
 from typing import Any
 
 import numpy as np
@@ -23,6 +26,7 @@ from deepmolecularnetwork.framework import (
     save_model_compat,
 )
 from deepmolecularnetwork.ohe.database import OHEDatabase
+from deepmolecularnetwork.utility.io import ReadDescriptors, ReadTarget
 from deepmolecularnetwork.utility.modelhelpers import GetKerasModel, GetTrainTestFnc
 from deepmolecularnetwork.utility.modelvalidation import TrainTestSplit
 
@@ -295,3 +299,70 @@ class NNTrain:
             save_model_compat(model, mout)
 
         return model, metrics
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for training One-Hot Encoding models."""
+    parser = argparse.ArgumentParser(
+        description="Train One-Hot Encoding (OHE) Deep Neural Network models."
+    )
+    parser.add_argument(
+        "--ohedir", default=None, type=str, help="Directory containing OHE files or database"
+    )
+    parser.add_argument(
+        "--ytarget", default=None, type=str, help="CSV file containing target activities"
+    )
+    parser.add_argument(
+        "--xmatrix", default=None, type=str, help="Optional molecular descriptors CSV file"
+    )
+    parser.add_argument(
+        "--epochs", default=50, type=int, help="Number of training epochs (default: 50)"
+    )
+    parser.add_argument("--batch_size", default=32, type=int, help="Batch size (default: 32)")
+    parser.add_argument(
+        "--nfilters", default=32, type=int, help="Number of conv filters (default: 32)"
+    )
+    parser.add_argument(
+        "--nunits", default=64, type=int, help="Number of dense units (default: 64)"
+    )
+    parser.add_argument(
+        "--random_state", default=42, type=int, help="Random state seed (default: 42)"
+    )
+    parser.add_argument("--mout", default=None, type=str, help="Output path to save trained model")
+    parser.add_argument(
+        "--verbose", default=1, type=int, help="Verbosity level 0, 1, or 2 (default: 1)"
+    )
+
+    args = parser.parse_args(argv)
+    if args.ohedir is None or args.ytarget is None:
+        parser.print_help()
+        print("\nERROR! Please specify both --ohedir and --ytarget.")
+        return 1
+
+    np.random.seed(args.random_state)
+    random.seed(args.random_state)
+
+    dx = None
+    n_descs = None
+    if args.xmatrix is not None:
+        sep = "\t" if not args.xmatrix.endswith(".csv") else ","
+        dx, n_descs, _ = ReadDescriptors(args.xmatrix, sep=sep)
+
+    sep_target = "\t" if not args.ytarget.endswith(".csv") else ","
+    target = ReadTarget(args.ytarget, sep=sep_target)
+
+    nn = NNTrain(args.ohedir, target, dx, n_descs)
+    nn.verbose = args.verbose
+    nn.simplerun(
+        batch_size=args.batch_size,
+        num_epochs=args.epochs,
+        nfilters=args.nfilters,
+        nunits=args.nunits,
+        random_state=args.random_state,
+        mout=args.mout,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

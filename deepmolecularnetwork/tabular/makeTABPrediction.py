@@ -83,27 +83,29 @@ class ModelPredictor:
                     fo.write(f"{key}," + ",".join(formatted_preds) + "\n")
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--desc_csv", default=None, type=str, help="Molecule descriptors")
-    p.add_argument("--minp", default=None, type=str, help="model input")
-    p.add_argument("--pout", default=None, type=str, help="Prediction output")
-    args = p.parse_args(sys.argv[1:])
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(
+        description="Make predictions on molecular descriptors using trained Tabular DNN models."
+    )
+    p.add_argument("--desc_csv", default=None, type=str, help="Molecule descriptors CSV")
+    p.add_argument(
+        "--minp", default=None, type=str, help="Path to trained model or model directory"
+    )
+    p.add_argument("--pout", default=None, type=str, help="Prediction output CSV")
+    args = p.parse_args(argv)
 
     if args.pout is None or args.desc_csv is None or args.minp is None:
+        p.print_help()
         print("\nUsage:")
         print("--desc_csv [Molecular descriptors file]")
         print("--minp [keras model out]")
         print("--pout [default None]")
-        print(
-            f"\nUsage model prediction example: python {sys.argv[0]} "
-            "--desc_csv rdkit.desc.csv --minp model --out output.csv\n"
-        )
-    else:
-        mp = ModelPredictor(args.minp, args.desc_csv)
-        mp.predict(args.pout)
+        return 0
+
+    mp = ModelPredictor(args.minp, args.desc_csv)
+    mp.predict(args.pout)
     return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

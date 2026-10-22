@@ -7,10 +7,12 @@ the terms of the GNU General Public Licenze, version 3.
 See the file LICENSE for details
 """
 
+import argparse
 from datetime import datetime
 import os
 from pathlib import Path
 import random
+import sys
 import time
 
 import numpy as np
@@ -512,3 +514,126 @@ def cv(
         _save_feature_importance(vm, feat_imp, featimp_out)
 
     return {key: np.mean(preds) for key, preds in predictions.items() if len(preds) > 0}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point for training 3D CNN Voxel models."""
+    p = argparse.ArgumentParser(
+        description=(
+            "Train 3D Convolutional Neural Network models " "on volumetric voxel representations."
+        )
+    )
+    p.add_argument("--db", default=None, type=str, help="Path to 3D Voxel database")
+    p.add_argument("--target_csv", default=None, type=str, help="Target values CSV file")
+    p.add_argument(
+        "--desc_csv",
+        default=None,
+        type=str,
+        help="Optional 2D/1D molecular descriptors CSV file for multimodal training",
+    )
+    p.add_argument(
+        "--epochs", default=100, type=int, help="Number of training epochs (default: 100)"
+    )
+    p.add_argument(
+        "--n_rot_train",
+        default=1,
+        type=int,
+        help="Number of random 3D rotations for training (default: 1)",
+    )
+    p.add_argument(
+        "--train_steps_per_epoch",
+        default=500,
+        type=int,
+        help="Training generator steps per epoch (default: 500)",
+    )
+    p.add_argument(
+        "--n_rot_validation",
+        default=1,
+        type=int,
+        help="Number of random rotations for validation (default: 1)",
+    )
+    p.add_argument(
+        "--val_steps_per_epoch",
+        default=100,
+        type=int,
+        help="Validation generator steps per epoch (default: 100)",
+    )
+    p.add_argument("--nlayers", default=10, type=int, help="Number of dense layers (default: 10)")
+    p.add_argument(
+        "--nunits", default=64, type=int, help="Number of neurons per dense layer (default: 64)"
+    )
+    p.add_argument(
+        "--nfilters", default=32, type=int, help="Number of 3D Conv filters (default: 32)"
+    )
+    p.add_argument("--random_state", default=42, type=int, help="Random state seed (default: 42)")
+    p.add_argument("--mout", default=None, type=str, help="Output file/dir to save trained model")
+    p.add_argument(
+        "--cvout",
+        default=None,
+        type=str,
+        help="If specified, run cross-validation and save predictions to this CSV path",
+    )
+    p.add_argument("--n_splits", default=5, type=int, help="Number of CV splits (default: 5)")
+    p.add_argument("--n_repeats", default=5, type=int, help="Number of CV repeats (default: 5)")
+    p.add_argument(
+        "--cvgroupfile", default=None, type=str, help="Optional CV group assignment file"
+    )
+    p.add_argument(
+        "--featimp_out",
+        default=None,
+        type=str,
+        help="Feature importance summary output CSV path",
+    )
+    p.add_argument("--tid", default=None, help="Target ID or column index")
+
+    args = p.parse_args(argv)
+
+    if args.db is None or args.target_csv is None:
+        p.print_help()
+        print("\nERROR! Both --db and --target_csv must be provided.")
+        return 1
+
+    if args.cvout is not None:
+        cv(
+            db=args.db,
+            csv_target=args.target_csv,
+            csv_descriptors=args.desc_csv,
+            n_splits_=args.n_splits,
+            n_repeats_=args.n_repeats,
+            num_epochs=args.epochs,
+            n_rot_train=args.n_rot_train,
+            train_steps_per_epoch_=args.train_steps_per_epoch,
+            n_rot_test=args.n_rot_validation,
+            test_steps_per_epoch_=args.val_steps_per_epoch,
+            ndense_layers=args.nlayers,
+            nunits=args.nunits,
+            nfilters=args.nfilters,
+            random_state=args.random_state,
+            cvout=args.cvout,
+            fcvgroup=args.cvgroupfile,
+            featimp_out=args.featimp_out,
+            mout=args.mout,
+        )
+    else:
+        simplerun(
+            db=args.db,
+            csv_target=args.target_csv,
+            csv_descriptors=args.desc_csv,
+            num_epochs=args.epochs,
+            n_rot_train=args.n_rot_train,
+            train_steps_per_epoch_=args.train_steps_per_epoch,
+            n_rotation_test=args.n_rot_validation,
+            test_steps_per_epoch_=args.val_steps_per_epoch,
+            ndense_layers=args.nlayers,
+            nunits=args.nunits,
+            nfilters=args.nfilters,
+            random_state=args.random_state,
+            outmodel=args.mout,
+            fcvgroup=args.cvgroupfile,
+            tid=args.tid,
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

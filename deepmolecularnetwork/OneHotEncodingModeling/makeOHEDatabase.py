@@ -10,15 +10,17 @@ import sys
 from deepmolecularnetwork.ohe.database import OHEDatabase
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     """CLI runner to convert CSV directory into OHEDatabase."""
-    if len(sys.argv) != 3:
-        print(f"\nUsage: {sys.argv[0]} [CSV database in] [OHE database out]\n")
-    else:
-        ohedb = OHEDatabase()
-        ohedb.loadOHEdbFromCSVDir(sys.argv[1])
-        ohedb.saveOHEdb(sys.argv[2])
+    args = sys.argv[1:] if argv is None else argv
+    if len(args) != 2:
+        print("\nUsage: makeOHEDatabase [CSV directory in] [OHE database out]\n")
+        return 1
+    ohedb = OHEDatabase()
+    ohedb.load_ohe_db_from_csv_dir(args[0])
+    ohedb.save_ohe_db(args[1])
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

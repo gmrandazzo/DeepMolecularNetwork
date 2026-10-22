@@ -39,11 +39,46 @@ Repository = "https://github.com/gmrandazzo/DeepMolecularNetwork"
 "Bug Tracker" = "https://github.com/gmrandazzo/DeepMolecularNetwork/issues"
 
 [project.scripts]
+dmn = "deepmolecularnetwork.cli:main"
+deepmolecularnetwork = "deepmolecularnetwork.cli:main"
+
+# Tabular modeling
 dmn-makednndb = "deepmolecularnetwork.tabular.makeDNNDB:main"
+dmn-maketabmodel = "deepmolecularnetwork.tabular.makeTABModel:main"
+dmn-maketabprediction = "deepmolecularnetwork.tabular.makeTABPrediction:main"
+
+# One-Hot Encoding & SMILES modeling
 dmn-makeohedb = "deepmolecularnetwork.OneHotEncodingModeling.makeOHEDatabase:main"
+dmn-makeohemodel = "deepmolecularnetwork.ohe.model:main"
+dmn-makeoheprediction = "deepmolecularnetwork.ohe.predict:main"
 dmn-ohepredict = "deepmolecularnetwork.ohe.predict:main"
 dmn-smi2ohe = "deepmolecularnetwork.SMILESModeling.SMI2OHEMatrix:main"
+
+# 3D Voxel modeling
+dmn-makevoxeldb = "deepmolecularnetwork.voxels.database:main"
+dmn-make3dcnnmodel = "deepmolecularnetwork.voxels.model:main"
+dmn-make3dcnnprediction = "deepmolecularnetwork.voxels.predict:main"
+dmn-makecsvdataset = "deepmolecularnetwork.voxels.make_csv_dataset:main"
+
+# 2D and 3D Visualization
 dmn-img2dvis = "deepmolecularnetwork.images2d.visualize:main"
+dmn-vis2dcnn = "deepmolecularnetwork.images2d.visualize:main"
+dmn-vis3dcnn = "deepmolecularnetwork.voxels.visualize:main"
+
+# Legacy script name aliases (for backward compatibility when installed via pip)
+makeDNNDB = "deepmolecularnetwork.tabular.makeDNNDB:main"
+makeTABModel = "deepmolecularnetwork.tabular.makeTABModel:main"
+makeTABPrediction = "deepmolecularnetwork.tabular.makeTABPrediction:main"
+makeOHEDatabase = "deepmolecularnetwork.OneHotEncodingModeling.makeOHEDatabase:main"
+makeOHEModel = "deepmolecularnetwork.ohe.model:main"
+makeOHEPrediction = "deepmolecularnetwork.ohe.predict:main"
+SMI2OHEMatrix = "deepmolecularnetwork.SMILESModeling.SMI2OHEMatrix:main"
+makeVoxelCNNDatabase = "deepmolecularnetwork.voxels.database:main"
+make3DCNNModel = "deepmolecularnetwork.voxels.model:main"
+make3DCNNPrediction = "deepmolecularnetwork.voxels.predict:main"
+makeCSVDataset = "deepmolecularnetwork.voxels.make_csv_dataset:main"
+visualize2DCNNLayer = "deepmolecularnetwork.images2d.visualize:main"
+visualize3DConvNetLayers = "deepmolecularnetwork.voxels.visualize:main"
 
 [project.optional-dependencies]
 keras2 = [

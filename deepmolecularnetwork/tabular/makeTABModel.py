@@ -9,7 +9,6 @@ import argparse
 from math import ceil
 from pathlib import Path
 import random
-from sys import argv
 import time
 
 import numpy as np
@@ -429,8 +428,10 @@ class NNTrain:
             WriteFeatureImportance(feat_imp, fimpfile)
 
 
-def main():
-    parser = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Train Tabular Deep Neural Network models (regression or classification)."
+    )
     parser.add_argument("--xmatrix", default=None, type=str, help="input data matrix")
     parser.add_argument("--ytarget", default=None, type=str, help="input data matrix")
     parser.add_argument("--epochs", default=100, type=int, help="Number of epochs")
@@ -450,45 +451,46 @@ def main():
     parser.add_argument("--verbose", default=0, type=int, help="Set verbosity 0, 1, 2")
     parser.add_argument("--mtype", default=0, type=int, help="Regression: 0, classification: 1")
 
-    args = parser.parse_args(argv[1:])
+    args = parser.parse_args(argv)
     if args.xmatrix is None or args.ytarget is None or args.batch_size is None:
-        print("ERROR! Please specify input table to train!")
-        print(
-            f"\n Usage: {argv[0]} --xmatrix [input file] --ytarget [input file] "
-            "--epochs [int] --batch_size [int]"
+        parser.print_help()
+        print("\nERROR! Please specify --xmatrix, --ytarget, and --batch_size.")
+        return 1
+
+    np.random.seed(args.random_state)
+    random.seed(args.random_state)
+    x_raw, _, xheader = ReadDescriptors(args.xmatrix)
+    target = ReadTarget(args.ytarget)
+    nn = NNTrain(x_raw, target, xheader)
+    nn.verbose = args.verbose
+    if args.cvout is None and args.gsout is None:
+        nn.simplerun(
+            args.batch_size,
+            args.batch_mode,
+            args.epochs,
+            args.ndense_layers,
+            args.nunits,
+            args.random_state,
+            args.mout,
         )
-    else:
-        np.random.seed(args.random_state)
-        random.seed(args.random_state)
-        x_raw, _, xheader = ReadDescriptors(args.xmatrix)
-        target = ReadTarget(args.ytarget)
-        nn = NNTrain(x_raw, target, xheader)
-        nn.verbose = args.verbose
-        if args.cvout is None and args.gsout is None:
-            nn.simplerun(
-                args.batch_size,
-                args.batch_mode,
-                args.epochs,
-                args.ndense_layers,
-                args.nunits,
-                args.random_state,
-                args.mout,
-            )
-        elif args.cvout is not None and args.gsout is None:
-            nn.runcv(
-                args.batch_size,
-                args.batch_mode,
-                args.epochs,
-                args.ndense_layers,
-                args.nunits,
-                args.cvout,
-                args.n_splits,
-                args.n_repeats,
-                args.random_state,
-                args.mout,
-                args.featimp,
-            )
+    elif args.cvout is not None and args.gsout is None:
+        nn.runcv(
+            args.batch_size,
+            args.batch_mode,
+            args.epochs,
+            args.ndense_layers,
+            args.nunits,
+            args.cvout,
+            args.n_splits,
+            args.n_repeats,
+            args.random_state,
+            args.mout,
+            args.featimp,
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    sys.exit(main())
