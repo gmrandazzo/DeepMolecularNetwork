@@ -12,6 +12,7 @@ import numpy as np
 
 try:
     import rdkit  # noqa: F401
+
     HAS_RDKIT = True
 except ImportError:
     HAS_RDKIT = False
@@ -46,12 +47,15 @@ def test_grid_axis():
 
 
 def test_canonical_orientation():
-    coords = np.array([
-        [1.0, 2.0, 3.0],
-        [2.0, 5.0, 1.0],
-        [-1.0, 0.0, -2.0],
-        [4.0, 1.0, 0.0],
-    ], dtype=np.float64)
+    coords = np.array(
+        [
+            [1.0, 2.0, 3.0],
+            [2.0, 5.0, 1.0],
+            [-1.0, 0.0, -2.0],
+            [4.0, 1.0, 0.0],
+        ],
+        dtype=np.float64,
+    )
     oriented = canonical_orientation(coords)
     assert oriented.shape == coords.shape
     # Centroid should be zero
@@ -79,7 +83,22 @@ class TestRDKitVoxelization:
         assert len(props["charge"]) == mol.GetNumAtoms()
 
     def test_voxelize_and_smiles_to_voxels(self):
-        grids = smiles_to_voxels("CCO", channels=("charge", "steric", "logp"), grid_size=8, spacing=1.5)
+        mol = embed_molecule("CCO", random_seed=42)
+        props = compute_atom_properties(mol)
+        coords = canonical_orientation(mol.GetConformer().GetPositions())
+        v_direct = voxelize(
+            coords,
+            props,
+            channels=("charge", "steric"),
+            grid_size=8,
+            spacing=1.5,
+        )
+        assert set(v_direct.keys()) == {"charge", "steric"}
+        assert v_direct["charge"].shape == (8, 8, 8)
+
+        grids = smiles_to_voxels(
+            "CCO", channels=("charge", "steric", "logp"), grid_size=8, spacing=1.5
+        )
         assert set(grids.keys()) == {"charge", "steric", "logp"}
         for ch, arr in grids.items():
             assert arr.shape == (8, 8, 8)
@@ -88,6 +107,10 @@ class TestRDKitVoxelization:
         # Steric values should be bounded between 0 and 1
         assert grids["steric"].min() >= 0.0
         assert grids["steric"].max() <= 1.0
+
+    def test_voxelize_invalid_channel(self):
+        with pytest.raises(ValueError, match="Unknown channels"):
+            voxelize(np.zeros((1, 3)), {}, channels=["not_a_channel"])
 
     def test_write_voxels_dx(self, tmp_path: Path):
         grids = {
@@ -134,20 +157,31 @@ class TestRDKitVoxelization:
         assert ret == 1
 
         # Invalid channel
-        ret_inv = main(["--smi", str(smi_file), "--outdir", str(outdir), "--channels", "invalid_ch"])
+        ret_inv = main(
+            ["--smi", str(smi_file), "--outdir", str(outdir), "--channels", "invalid_ch"]
+        )
         assert ret_inv == 1
 
         # Valid run
         failed_csv = tmp_path / "failed.csv"
-        ret_ok = main([
-            "--smi", str(smi_file),
-            "--outdir", str(outdir),
-            "--channels", "charge,steric",
-            "--grid_size", "8",
-            "--spacing", "1.2",
-            "--nproc", "1",
-            "--failed_out", str(failed_csv),
-        ])
+        ret_ok = main(
+            [
+                "--smi",
+                str(smi_file),
+                "--outdir",
+                str(outdir),
+                "--channels",
+                "charge,steric",
+                "--grid_size",
+                "8",
+                "--spacing",
+                "1.2",
+                "--nproc",
+                "1",
+                "--failed_out",
+                str(failed_csv),
+            ]
+        )
         assert ret_ok == 0
         assert (outdir / "benzene.charge.dx").is_file()
         assert failed_csv.is_file()

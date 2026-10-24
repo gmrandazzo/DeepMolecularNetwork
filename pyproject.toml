@@ -83,6 +83,7 @@ visualize3DConvNetLayers = "deepmolecularnetwork.voxels.visualize:main"
 
 [project.optional-dependencies]
 keras2 = [
+    "numpy>=1.22.0,<2.0.0",
     "tensorflow-cpu>=2.13.0,<2.16.0",
     "keras>=2.13.0,<3.0.0",
     "tensorboard>=2.13.0",

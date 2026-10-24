@@ -225,7 +225,9 @@ def voxelize(
             values = 1.0 - np.prod(1.0 - gauss, axis=1)
         elif ch == "esp":
             dist = np.sqrt(d2 + _ESP_SOFTCORE**2)
-            values = np.clip((properties["charge"][None, :] / dist).sum(axis=1), -_ESP_CLIP, _ESP_CLIP)
+            values = np.clip(
+                (properties["charge"][None, :] / dist).sum(axis=1), -_ESP_CLIP, _ESP_CLIP
+            )
         else:
             values = gauss @ properties[ch]
         grids[ch] = values.reshape(shape)
@@ -382,7 +384,7 @@ def main(argv: list[str] | None = None) -> int:
         with open(args.failed_out, "w", encoding="utf-8") as fo:
             fo.write("Molecule,Error\n")
             for name, err in failed.items():
-                fo.write(f"{name},\"{err}\"\n")
+                fo.write(f'{name},"{err}"\n')
     return 0 if ok else 1
 
 
