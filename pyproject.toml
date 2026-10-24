@@ -59,6 +59,7 @@ dmn-makevoxeldb = "deepmolecularnetwork.voxels.database:main"
 dmn-make3dcnnmodel = "deepmolecularnetwork.voxels.model:main"
 dmn-make3dcnnprediction = "deepmolecularnetwork.voxels.predict:main"
 dmn-makecsvdataset = "deepmolecularnetwork.voxels.make_csv_dataset:main"
+dmn-smi2voxel = "deepmolecularnetwork.voxels.rdkit_voxelizer:main"
 
 # 2D and 3D Visualization
 dmn-img2dvis = "deepmolecularnetwork.images2d.visualize:main"
@@ -90,6 +91,9 @@ keras3 = [
     "tensorflow-cpu>=2.16.0",
     "keras>=3.0.0",
     "tensorboard>=2.16.0",
+]
+chem = [
+    "rdkit>=2023.9.1",
 ]
 test = [
     "pytest>=7.0.0",

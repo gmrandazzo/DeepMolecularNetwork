@@ -37,7 +37,8 @@ def build_voxel_database(
         path_obj = Path(dir_)
         if not path_obj.exists():
             continue
-        for p in path_obj.iterdir():
+        # Sorted so that multichannel files are stacked in the same order for every molecule.
+        for p in sorted(path_obj.iterdir()):
             if p.is_file() and p.name.endswith(".dx"):
                 name = str(p.stem).split(".")[0]
                 dxfile.setdefault(name, []).append(str(p))

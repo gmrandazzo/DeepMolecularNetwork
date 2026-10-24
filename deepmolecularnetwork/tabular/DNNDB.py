@@ -29,7 +29,7 @@ def load_name_list(fnames):
 def add_dnn_database(path_, names, xmatrix_):
     """Append a descriptor matrix and names to DNN database directory."""
     xmatrix = np.array(xmatrix_)
-    dbpath = "%s.dnndb" % (path_)
+    dbpath = str(path_) if str(path_).endswith(".dnndb") else f"{path_}.dnndb"
     i = 0
     if not Path(dbpath).is_dir():
         os.makedirs(dbpath, exist_ok=True)

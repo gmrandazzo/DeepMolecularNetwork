@@ -117,7 +117,15 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv if argv is not None else sys.argv[1:])
 
     model = load_model_compat(args.model)
-    img_tensor = load_and_preprocess_image(args.img)
+    target_size = (150, 150)
+    in_shape = getattr(model, "input_shape", None)
+    if in_shape is not None and len(in_shape) >= 3:
+        h = in_shape[1]
+        w = in_shape[2]
+        if h is not None and w is not None:
+            target_size = (int(w), int(h))
+
+    img_tensor = load_and_preprocess_image(args.img, target_size=target_size)
     visualize_layers(model, img_tensor, save_path=args.save)
     return 0
 

@@ -260,6 +260,13 @@ class NNTrain:
 
         if model_output is not None:
             save_model_compat(model, model_output)
+            p = Path(model_output)
+            header_dir = p if p.is_dir() else p.parent
+            header_file = header_dir / "odesc_header.csv"
+            if not header_file.exists():
+                with open(header_file, "w") as f:
+                    for dname in self.xheader:
+                        f.write(f"{dname}\n")
 
         return {
             "r2": r2_val,

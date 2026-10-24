@@ -102,11 +102,20 @@ def get_load_model_fnc():
 def read_descriptor_order(mpath):
     """Read the feature ordering saved during model training."""
     odesc = []
-    odesc_file = "%s/odesc_header.csv" % (str(Path(mpath).absolute()))
-    if Path(odesc_file).exists():
-        with open(odesc_file) as f:
-            for line in f:
-                odesc.append(line.strip())
+    p = Path(mpath).resolve()
+    candidates = [
+        p / "odesc_header.csv",
+        p.parent / "odesc_header.csv",
+        p.parent / f"{p.stem}_odesc_header.csv",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            with open(candidate) as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped:
+                        odesc.append(stripped)
+            return odesc
     return odesc
 
 
@@ -117,10 +126,16 @@ def load_keras_models(mpath):
     if p_path.is_file():
         yield loadfnc(str(p_path))
         return
-    p = list(p_path.glob("**/*.h5")) + list(p_path.glob("**/*.keras"))
-    files = [x for x in p if x.is_file()]
-    for file_ in sorted(files):
-        yield loadfnc(str(file_))
+    for ext in (".keras", ".h5"):
+        candidate = p_path.parent / f"{p_path.name}{ext}"
+        if candidate.is_file():
+            yield loadfnc(str(candidate))
+            return
+    if p_path.is_dir():
+        p = list(p_path.glob("**/*.h5")) + list(p_path.glob("**/*.keras"))
+        files = [x for x in p if x.is_file()]
+        for file_ in sorted(files):
+            yield loadfnc(str(file_))
 
 
 def get_cuda_devices():

@@ -17,9 +17,11 @@ from deepmolecularnetwork.utility.modelhelpers import LoadKerasModels, ReadDescr
 class ModelPredictor:
     def __init__(self, mpath, csv_descriptors):
         self.mpath = mpath
-        self.odesc = ReadDescriptorOrder(mpath)
         self.desc, self.nfeatures, self.header = ReadDescriptors(csv_descriptors)
         self.keys = list(self.desc.keys())
+        self.odesc = ReadDescriptorOrder(mpath)
+        if not self.odesc:
+            self.odesc = list(self.header)
         # check that all the descriptors
         # are present in the previous loaded desc
         nf = []

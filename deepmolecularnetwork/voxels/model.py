@@ -168,7 +168,8 @@ class Voxels3DModel:
 
         target_arr = np.array(batch_target)
         if batch_desc_features is not None:
-            return [batch_features, batch_desc_features], target_arr
+            # Multi-input batches must be tuples: Keras 3 / tf.data reject lists in generators.
+            return (batch_features, batch_desc_features), target_arr
         return batch_features, target_arr
 
     def voxel_train_generator(self, keys, n_rot_repetitions=1):
@@ -182,12 +183,16 @@ class Voxels3DModel:
         return self.make_dataset(keys, random_voxel_rotations)
 
     def feature_permutation(self, batch_features, fid=-1):
-        batch_perm = batch_features.copy()
+        """Return a copy of a multimodal batch with one feature (or the voxels) permuted.
+
+        Every array is copied so that the caller's validation data is never shuffled in place.
+        """
+        batch_perm = [np.array(b, copy=True) for b in batch_features]
         if fid < self.nfeatures:
             self._rng.shuffle(batch_perm[1][:, fid])
         else:
-            self._rng.shuffle(batch_perm[0][:])
-        return batch_perm
+            self._rng.shuffle(batch_perm[0])
+        return tuple(batch_perm)
 
 
 Voxel3DModel = Voxels3DModel

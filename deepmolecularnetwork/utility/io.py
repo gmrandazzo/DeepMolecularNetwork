@@ -63,7 +63,7 @@ def _format_prediction_columns(key, col, ground_true_dict, prediction_dict):
 
 def _format_recalculated_columns(key, col, ground_true_dict, recalculated_dict):
     """Format recalculated statistics for a given key and column index."""
-    if key in recalculated_dict:
+    if recalculated_dict and key in recalculated_dict:
         yrecalc = [float(recalc[col]) for recalc in recalculated_dict[key]]
         freq = len(yrecalc)
         yravg = float(np.mean(yrecalc))
@@ -73,8 +73,13 @@ def _format_recalculated_columns(key, col, ground_true_dict, recalculated_dict):
     return ",0.0,0.0,0.0,0"
 
 
-def write_cross_validation_output(outcsv, ground_true_dict, prediction_dict, recalculated_dict):
-    """Write cross-validation predictions and statistics to CSV."""
+def write_cross_validation_output(
+    outcsv, ground_true_dict, prediction_dict, recalculated_dict=None
+):
+    """Write cross-validation predictions and statistics to CSV.
+
+    ``recalculated_dict`` is optional; when ``None`` the recalculated columns are zero-filled.
+    """
     ncols = len(list(ground_true_dict.values())[0])
     with open(outcsv, "w") as f:
         f.write("Molecule")

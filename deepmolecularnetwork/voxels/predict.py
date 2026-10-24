@@ -9,10 +9,8 @@
 import argparse
 from datetime import datetime
 import os
-from pathlib import Path
 import random
 import sys
-from typing import Any
 
 import numpy as np
 
@@ -72,9 +70,7 @@ class ModelPredictor:
         print("Channel type: %s" % (conv3d_chtype))
         return tuple(shape_list), conv3d_chtype
 
-    def voxel_data_generator(
-        self, random_voxel_rotations: int
-    ) -> np.ndarray | list[np.ndarray]:
+    def voxel_data_generator(self, random_voxel_rotations: int) -> np.ndarray | list[np.ndarray]:
         """Generate test batches with rototranslations for all molecules."""
         if "last" in self.conv3d_chtype:
             batch_features = np.zeros(
@@ -82,7 +78,13 @@ class ModelPredictor:
             )
         else:
             batch_features = np.zeros(
-                (0, self.input_shape[0], self.input_shape[1], self.input_shape[2], self.input_shape[3])
+                (
+                    0,
+                    self.input_shape[0],
+                    self.input_shape[1],
+                    self.input_shape[2],
+                    self.input_shape[3],
+                )
             )
 
         batch_desc_features = np.zeros((0, self.nfeatures)) if self.other_descriptors else None
@@ -135,7 +137,9 @@ class ModelPredictor:
             return [batch_features, batch_desc_features]
         return batch_features
 
-    def predict(self, n_rotations: int = 100, pout: str = "predictions.csv") -> dict[str, list[float]]:
+    def predict(
+        self, n_rotations: int = 100, pout: str = "predictions.csv"
+    ) -> dict[str, list[float]]:
         """Run predictions on the voxel database using the models found at self.mpath."""
         predictions: dict[str, list[float]] = {key: [] for key in self.keys}
         print("N. rotations: %d" % (n_rotations))
@@ -166,8 +170,10 @@ class ModelPredictor:
                     y_max = float(np.max(predictions[key]))
                     fo.write(f"{key},{ypavg:.4f},{ystdev:.4f},{y_min:.4f},{y_max:.4f}\n")
 
-        all_y_pout = f"all_y_{pout}" if not os.path.dirname(pout) else os.path.join(
-            os.path.dirname(pout), f"all_y_{os.path.basename(pout)}"
+        all_y_pout = (
+            f"all_y_{pout}"
+            if not os.path.dirname(pout)
+            else os.path.join(os.path.dirname(pout), f"all_y_{os.path.basename(pout)}")
         )
         with open(all_y_pout, "w") as fo:
             for key in self.keys:
@@ -181,10 +187,15 @@ class ModelPredictor:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point for 3D CNN Voxel model predictions."""
     p = argparse.ArgumentParser(
-        description="Predict target values for molecules in a 3D Voxel database using trained 3D CNN models."
+        description=(
+            "Predict target values for molecules in a 3D Voxel "
+            "database using trained 3D CNN models."
+        )
     )
     p.add_argument("--db", default=None, type=str, help="Path to 3D Voxel database")
-    p.add_argument("--minp", default=None, type=str, help="Path to trained model or model directory")
+    p.add_argument(
+        "--minp", default=None, type=str, help="Path to trained model or model directory"
+    )
     p.add_argument(
         "--desc_csv",
         default=None,

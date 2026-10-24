@@ -8,7 +8,7 @@
 
 import importlib
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
 
 from deepmolecularnetwork import __version__
 
@@ -122,6 +122,16 @@ COMMANDS_REGISTRY: dict[str, tuple[str, str, str]] = {
         "main",
         "Alias for makecsvdataset",
     ),
+    "smi2voxel": (
+        "deepmolecularnetwork.voxels.rdkit_voxelizer",
+        "main",
+        "Generate multichannel OpenDX voxels from SMILES with RDKit",
+    ),
+    "voxel-fromsmi": (
+        "deepmolecularnetwork.voxels.rdkit_voxelizer",
+        "main",
+        "Alias for smi2voxel",
+    ),
     # Visualizations
     "img2dvis": (
         "deepmolecularnetwork.images2d.visualize",
@@ -159,7 +169,10 @@ def _load_command(cmd_name: str) -> Callable[[list[str] | None], int]:
     except ImportError as exc:
         print(f"ERROR: Could not load subcommand '{cmd_name}' due to missing dependencies:")
         print(f"  {exc}")
-        print("\nPlease ensure all required extras are installed (e.g., pip install deepmolecularnetwork[keras3]).")
+        print(
+            "\nPlease ensure all required extras are installed "
+            "(e.g., pip install deepmolecularnetwork[keras3])."
+        )
         sys.exit(1)
 
     handler = getattr(mod, func_name)
@@ -191,6 +204,7 @@ Primary Subcommands:
     makeoheprediction / ohe-predict   Predict with OHE model
 
   3D Voxel Modeling:
+    smi2voxel / voxel-fromsmi          SMILES -> RDKit voxels (OpenDX)
     makevoxeldb / voxel-makedb         Build 3D voxel database
     make3dcnnmodel / voxel-train       Train 3D CNN model
     make3dcnnprediction / voxel-predict Predict with 3D CNN model

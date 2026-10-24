@@ -6,10 +6,7 @@
 # See the file LICENSE for details
 """Unit tests for DeepMolecularNetwork CLI entry points and command dispatching."""
 
-import os
-import sys
 from pathlib import Path
-import tempfile
 import pytest
 
 from deepmolecularnetwork.cli import main as cli_main

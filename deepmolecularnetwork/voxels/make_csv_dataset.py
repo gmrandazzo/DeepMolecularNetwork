@@ -7,7 +7,6 @@
 """Utility to export flattened 3D voxel matrices to CSV tabular format."""
 
 import argparse
-from pathlib import Path
 import sys
 
 import numpy as np
@@ -67,7 +66,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Convert a 3D Voxel database into a tabular CSV dataset."
     )
-    parser.add_argument("--activity_csv", default=None, type=str, help="Path to CSV containing molecule activity")
+    parser.add_argument(
+        "--activity_csv", default=None, type=str, help="Path to CSV containing molecule activity"
+    )
     parser.add_argument("--db", default=None, type=str, help="Path to 3D Voxel database directory")
     parser.add_argument("--csv_out", default=None, type=str, help="Path for output tabular CSV")
 
